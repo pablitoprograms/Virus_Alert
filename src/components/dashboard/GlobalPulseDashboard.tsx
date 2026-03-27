@@ -11,20 +11,25 @@ import {
   LayoutDashboard, 
   Globe, 
   FileText, 
-  ChevronLeft, 
-  ChevronRight, 
   PanelLeftClose, 
-  PanelLeftOpen,
   Activity,
-  ShieldAlert,
-  Menu
+  Menu,
+  AlertCircle,
+  Clock,
+  MapPin,
+  TrendingUp
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+
+type DashboardView = 'dashboard' | 'map' | 'reports';
 
 export default function GlobalPulseDashboard() {
   const [outbreakData, setOutbreakData] = useState<IdentifyOutbreaksOutput | null>(null);
   const [isPanelsHidden, setIsPanelsHidden] = useState(false);
+  const [currentView, setCurrentView] = useState<DashboardView>('dashboard');
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -44,6 +49,15 @@ export default function GlobalPulseDashboard() {
   const activeClustersCount = outbreakData?.outbreakClusters.length || 0;
   const highPriorityCount = outbreakData?.outbreakClusters.filter(c => c.priority === 'High').length || 0;
 
+  const handleNavClick = (view: DashboardView) => {
+    setCurrentView(view);
+    if (view === 'map') {
+      setIsPanelsHidden(true);
+    } else {
+      setIsPanelsHidden(false);
+    }
+  };
+
   return (
     <div className="relative h-screen w-screen flex bg-[#0a0a0c] text-white overflow-hidden font-body">
       
@@ -52,7 +66,10 @@ export default function GlobalPulseDashboard() {
         <Button
           variant="secondary"
           size="icon"
-          onClick={() => setIsPanelsHidden(false)}
+          onClick={() => {
+            setIsPanelsHidden(false);
+            if (currentView === 'map') setCurrentView('dashboard');
+          }}
           className="absolute top-6 left-6 z-50 bg-[#1e2025]/80 backdrop-blur-md border-white/10 hover:bg-[#252830] transition-all shadow-2xl"
           title="Mostrar Paneles"
         >
@@ -64,7 +81,7 @@ export default function GlobalPulseDashboard() {
       <aside 
         className={cn(
           "relative z-40 flex flex-col bg-[#0f1012] border-r border-white/5 transition-all duration-500 ease-in-out shadow-2xl",
-          isPanelsHidden ? "w-0 -translate-x-full opacity-0" : "w-72 translate-x-0 opacity-100"
+          isPanelsHidden ? "w-0 -translate-x-full opacity-0 overflow-hidden" : "w-72 translate-x-0 opacity-100"
         )}
       >
         <div className="p-8 flex items-center gap-3">
@@ -89,9 +106,24 @@ export default function GlobalPulseDashboard() {
         </div>
 
         <nav className="flex-1 px-4 space-y-2">
-          <NavItem icon={<LayoutDashboard size={20} />} label="Panel de Control" active />
-          <NavItem icon={<Globe size={20} />} label="Mapa Global" />
-          <NavItem icon={<FileText size={20} />} label="Informes" />
+          <NavItem 
+            icon={<LayoutDashboard size={20} />} 
+            label="Panel de Control" 
+            active={currentView === 'dashboard'} 
+            onClick={() => handleNavClick('dashboard')}
+          />
+          <NavItem 
+            icon={<Globe size={20} />} 
+            label="Mapa Global" 
+            active={currentView === 'map'} 
+            onClick={() => handleNavClick('map')}
+          />
+          <NavItem 
+            icon={<FileText size={20} />} 
+            label="Informes" 
+            active={currentView === 'reports'} 
+            onClick={() => handleNavClick('reports')}
+          />
         </nav>
 
         <div className="p-6 mt-auto border-t border-white/5">
@@ -114,12 +146,15 @@ export default function GlobalPulseDashboard() {
         </div>
       </aside>
 
-      {/* Contenido Principal (Mapa) */}
+      {/* Contenido Principal */}
       <main className="flex-1 relative flex flex-col min-w-0">
         <header className="absolute top-0 left-0 w-full z-20 px-8 py-8 flex justify-between items-start pointer-events-none">
           <div className="pointer-events-auto">
             <h2 className="text-sm font-bold text-white/40 uppercase tracking-[0.3em] mb-1">Visualización en Tiempo Real</h2>
-            <p className="text-2xl font-bold">Monitor de Brotes Pandémicos</p>
+            <p className="text-2xl font-bold">
+              {currentView === 'dashboard' ? 'Monitor de Brotes Pandémicos' : 
+               currentView === 'map' ? 'Mapa Táctico Global' : 'Base de Datos de Informes'}
+            </p>
           </div>
           
           {!isPanelsHidden && (
@@ -132,10 +167,71 @@ export default function GlobalPulseDashboard() {
           )}
         </header>
 
-        <div className="flex-1 relative">
-          <WorldMap>
-            <OutbreakHeatmap data={outbreakData} />
-          </WorldMap>
+        <div className="flex-1 relative overflow-hidden">
+          {currentView === 'reports' ? (
+            <div className="absolute inset-0 bg-[#0a0a0c] p-8 pt-32 overflow-auto">
+              <div className="max-w-6xl mx-auto bg-[#0f1012] border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
+                <div className="p-8 border-b border-white/5 bg-white/2 flex items-center justify-between">
+                  <h3 className="text-xl font-bold flex items-center gap-3">
+                    <FileText className="text-[#54BBDA]" />
+                    Registro Detallado de Brotes
+                  </h3>
+                  <Badge variant="outline" className="border-[#54BBDA]/20 text-[#54BBDA]">
+                    {outbreakData?.outbreakClusters.length} Registros Activos
+                  </Badge>
+                </div>
+                <Table>
+                  <TableHeader className="bg-white/2">
+                    <TableRow className="border-white/5 hover:bg-transparent">
+                      <TableHead className="text-white/40 font-bold uppercase tracking-tighter text-[10px]">Enfermedad</TableHead>
+                      <TableHead className="text-white/40 font-bold uppercase tracking-tighter text-[10px]">Ubicación</TableHead>
+                      <TableHead className="text-white/40 font-bold uppercase tracking-tighter text-[10px]">Estado</TableHead>
+                      <TableHead className="text-white/40 font-bold uppercase tracking-tighter text-[10px]">Prioridad</TableHead>
+                      <TableHead className="text-white/40 font-bold uppercase tracking-tighter text-[10px]">Intensidad</TableHead>
+                      <TableHead className="text-white/40 font-bold uppercase tracking-tighter text-[10px]">Fecha</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {outbreakData?.outbreakClusters.map((cluster, i) => (
+                      <TableRow key={i} className="border-white/5 hover:bg-white/2 transition-colors">
+                        <TableCell className="font-bold text-sm">{cluster.diseaseName}</TableCell>
+                        <TableCell className="text-white/60 text-xs">{cluster.locationDescription}</TableCell>
+                        <TableCell>
+                          <span className="text-[10px] font-bold text-[#54BBDA] uppercase tracking-wider">{cluster.status}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={cn(
+                            "text-[9px] uppercase",
+                            cluster.priority === 'High' ? "bg-red-500/10 text-red-500 border-red-500/20" : "bg-orange-500/10 text-orange-500 border-orange-500/20"
+                          )}>
+                            {cluster.priority === 'High' ? 'Crítico' : 'Alerta'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                              <div 
+                                className={cn("h-full", cluster.priority === 'High' ? "bg-red-500" : "bg-orange-500")}
+                                style={{ width: `${cluster.intensity}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-mono">{cluster.intensity}%</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-white/40 text-xs font-mono">
+                          {new Date(cluster.reportedDate).toLocaleDateString('es-ES')}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          ) : (
+            <WorldMap>
+              <OutbreakHeatmap data={outbreakData} />
+            </WorldMap>
+          )}
         </div>
 
         {/* Panel de Alertas Recientes */}
@@ -165,9 +261,10 @@ export default function GlobalPulseDashboard() {
   );
 }
 
-function NavItem({ icon, label, active = false }: { icon: React.ReactNode, label: string, active?: boolean }) {
+function NavItem({ icon, label, active = false, onClick }: { icon: React.ReactNode, label: string, active?: boolean, onClick: () => void }) {
   return (
     <button 
+      onClick={onClick}
       className={cn(
         "w-full flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-200 group",
         active 

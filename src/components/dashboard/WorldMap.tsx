@@ -61,7 +61,8 @@ export function WorldMap({ children }: WorldMapProps) {
       >
         <svg 
           viewBox="0 0 1000 500" 
-          className="w-full h-auto max-h-full drop-shadow-[0_0_50px_rgba(0,0,0,0.8)]"
+          preserveAspectRatio="xMidYMid meet"
+          className="w-full h-full max-h-full drop-shadow-[0_0_50px_rgba(0,0,0,0.8)]"
           xmlns="http://www.w3.org/2000/svg"
         >
           {/* Cuadrícula Refinada */}
@@ -105,7 +106,7 @@ export function WorldMap({ children }: WorldMapProps) {
       </div>
 
       {/* Leyenda Profesional */}
-      <div className="absolute left-8 bottom-8 flex flex-col gap-4 p-6 bg-[#0f1012]/80 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl min-w-[200px]">
+      <div className="absolute left-8 bottom-8 flex flex-col gap-4 p-6 bg-[#0f1012]/80 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl min-w-[200px] hidden sm:flex">
         <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-1">Severidad del Brote</h3>
         <div className="space-y-3">
           <LegendItem color="bg-red-600 shadow-[0_0_12px_#ef4444]" label="Alerta Crítica" />
