@@ -12,6 +12,7 @@ import {
   DialogDescription 
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { MapPin, AlertCircle, Calendar, Activity, Info } from "lucide-react";
 
 interface OutbreakHeatmapProps {
