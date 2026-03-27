@@ -1,8 +1,10 @@
+
 "use client";
 
 import React from 'react';
 import { IdentifyOutbreaksOutput } from '@/ai/flows/identify-outbreaks-flow';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface OutbreakHeatmapProps {
   data: IdentifyOutbreaksOutput | null;
@@ -11,8 +13,6 @@ interface OutbreakHeatmapProps {
 export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
   if (!data || !data.outbreakClusters) return null;
 
-  // Coordinate mapping function (Simple equirectangular projection)
-  // Maps -180...180 to 0...1000 and -90...90 to 500...0
   const mapCoords = (lat: number, lng: number) => {
     const x = (lng + 180) * (1000 / 360);
     const y = (90 - lat) * (500 / 180);
@@ -23,12 +23,11 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
     <g>
       {data.outbreakClusters.map((cluster, idx) => {
         const { x, y } = mapCoords(cluster.latitude, cluster.longitude);
-        const radius = 5 + (cluster.intensity / 10);
+        const intensityScale = cluster.intensity / 100;
+        const radius = 6 + (intensityScale * 12);
         
-        const colorClass = 
-          cluster.priority === 'High' ? 'heatmap-high' : 
-          cluster.priority === 'Medium' ? 'heatmap-medium' : 
-          'heatmap-low';
+        const isHigh = cluster.priority === 'High';
+        const isMedium = cluster.priority === 'Medium';
 
         return (
           <foreignObject key={idx} x={x - radius * 2} y={y - radius * 2} width={radius * 4} height={radius * 4}>
@@ -36,37 +35,49 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="relative w-full h-full flex items-center justify-center cursor-pointer group">
-                    {/* Outer Glow */}
+                    {/* Pulsating Glow - Bright Red for High Priority */}
                     <div 
                       className={cn(
-                        "absolute w-full h-full rounded-full opacity-20 blur-xl heatmap-pulse",
-                        cluster.priority === 'High' ? 'bg-[#E60000]' : cluster.priority === 'Medium' ? 'bg-[#FF6600]' : 'bg-[#FFCC00]'
+                        "absolute rounded-full opacity-40 blur-xl animate-pulse",
+                        isHigh ? "bg-red-600 shadow-[0_0_30px_#ef4444]" : isMedium ? "bg-orange-500" : "bg-yellow-400"
                       )}
+                      style={{ 
+                        width: `${radius * 3}px`, 
+                        height: `${radius * 3}px`,
+                        animationDuration: isHigh ? '1.5s' : '3s'
+                      }}
                     />
-                    {/* Core Point */}
+                    
+                    {/* Core Point - Bright Red and White Border */}
                     <div 
                       className={cn(
-                        "w-2 h-2 rounded-full border border-white/40 shadow-lg relative z-10 transition-transform group-hover:scale-150",
-                        cluster.priority === 'High' ? 'bg-[#E60000]' : cluster.priority === 'Medium' ? 'bg-[#FF6600]' : 'bg-[#FFCC00]'
+                        "rounded-full border-2 border-white/80 shadow-2xl relative z-10 transition-all duration-300 group-hover:scale-150 group-hover:border-white",
+                        isHigh ? "bg-red-600" : isMedium ? "bg-orange-500" : "bg-yellow-400"
                       )}
+                      style={{ 
+                        width: `${radius}px`, 
+                        height: `${radius}px`
+                      }}
                     />
                   </div>
                 </TooltipTrigger>
-                <TooltipContent className="p-3 bg-[#1e2025] border-white/10 shadow-2xl">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-white">{cluster.diseaseName}</span>
+                <TooltipContent className="p-4 bg-[#0f1012] border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)] rounded-2xl">
+                  <div className="space-y-2 min-w-[140px]">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-sm font-bold text-white">{cluster.diseaseName}</span>
                       <span className={cn(
-                        "text-[10px] px-1.5 py-0.5 rounded uppercase font-bold",
-                        cluster.priority === 'High' ? 'bg-red-500/20 text-red-400' : 'bg-orange-500/20 text-orange-400'
+                        "text-[9px] px-2 py-0.5 rounded-full uppercase font-black tracking-widest",
+                        isHigh ? "bg-red-500 text-white" : "bg-orange-500/20 text-orange-400"
                       )}>
-                        {cluster.priority}
+                        {isHigh ? 'Crítico' : isMedium ? 'Alerta' : 'Bajo'}
                       </span>
                     </div>
-                    <p className="text-[10px] text-white/60">{cluster.locationDescription}</p>
-                    <div className="flex justify-between items-center pt-2">
-                      <span className="text-[10px] text-[#54BBDA]">{cluster.status}</span>
-                      <span className="text-[10px] text-white/40">{new Date(cluster.reportedDate).toLocaleDateString()}</span>
+                    <p className="text-[10px] text-white/50 leading-relaxed">{cluster.locationDescription}</p>
+                    <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                      <span className="text-[10px] font-bold text-[#54BBDA] uppercase tracking-tighter">{cluster.status}</span>
+                      <span className="text-[10px] text-white/30 italic">
+                        {new Date(cluster.reportedDate).toLocaleDateString('es-ES')}
+                      </span>
                     </div>
                   </div>
                 </TooltipContent>
@@ -78,5 +89,3 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
     </g>
   );
 }
-
-import { cn } from "@/lib/utils";

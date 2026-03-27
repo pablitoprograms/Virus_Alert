@@ -1,20 +1,33 @@
+
 "use client";
 
-import React, { useEffect, useState, useTransition } from 'react';
+import React, { useState, useTransition, useEffect } from 'react';
 import { WorldMap } from './WorldMap';
 import { OutbreakHeatmap } from './OutbreakHeatmap';
-import { TimelineSlider } from './TimelineSlider';
+import { RecentAlerts } from './RecentAlerts';
 import { identifyOutbreaks, IdentifyOutbreaksOutput } from '@/ai/flows/identify-outbreaks-flow';
 import { RAW_HEALTH_REPORTS } from '@/lib/mock-health-reports';
-import { Activity, ShieldAlert, Zap, Globe, Info } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  Globe, 
+  FileText, 
+  ChevronLeft, 
+  ChevronRight, 
+  PanelLeftClose, 
+  PanelLeftOpen,
+  Activity,
+  ShieldAlert,
+  Menu
+} from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export default function GlobalPulseDashboard() {
   const [outbreakData, setOutbreakData] = useState<IdentifyOutbreaksOutput | null>(null);
+  const [isPanelsHidden, setIsPanelsHidden] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    // Process initial raw data via GenAI
     startTransition(async () => {
       try {
         const results = await identifyOutbreaks({
@@ -23,116 +36,153 @@ export default function GlobalPulseDashboard() {
         });
         setOutbreakData(results);
       } catch (err) {
-        console.error("Failed to load outbreak clusters:", err);
+        console.error("Error al cargar datos de brotes:", err);
       }
     });
   }, []);
 
+  const activeClustersCount = outbreakData?.outbreakClusters.length || 0;
+  const highPriorityCount = outbreakData?.outbreakClusters.filter(c => c.priority === 'High').length || 0;
+
   return (
-    <div className="relative h-screen w-screen flex flex-col bg-[#141518] text-white overflow-hidden">
-      {/* Top Header Navigation */}
-      <header className="absolute top-0 left-0 w-full z-20 flex items-center justify-between px-8 py-6 pointer-events-none">
-        <div className="flex items-center gap-4 pointer-events-auto">
-          <div className="w-10 h-10 rounded-xl bg-[#7381C0] flex items-center justify-center shadow-[0_0_20px_rgba(115,129,192,0.4)]">
-            <Globe className="text-[#141518]" size={24} />
+    <div className="relative h-screen w-screen flex bg-[#0a0a0c] text-white overflow-hidden font-body">
+      
+      {/* Botón Flotante para Mostrar Paneles (cuando están ocultos) */}
+      {isPanelsHidden && (
+        <Button
+          variant="secondary"
+          size="icon"
+          onClick={() => setIsPanelsHidden(false)}
+          className="absolute top-6 left-6 z-50 bg-[#1e2025]/80 backdrop-blur-md border-white/10 hover:bg-[#252830] transition-all shadow-2xl"
+          title="Mostrar Paneles"
+        >
+          <Menu size={20} className="text-[#54BBDA]" />
+        </Button>
+      )}
+
+      {/* Barra Lateral de Navegación */}
+      <aside 
+        className={cn(
+          "relative z-40 flex flex-col bg-[#0f1012] border-r border-white/5 transition-all duration-500 ease-in-out shadow-2xl",
+          isPanelsHidden ? "w-0 -translate-x-full opacity-0" : "w-72 translate-x-0 opacity-100"
+        )}
+      >
+        <div className="p-8 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#7381C0] to-[#54BBDA] flex items-center justify-center shadow-[0_0_20px_rgba(115,129,192,0.3)]">
+            <Globe className="text-[#0a0a0c]" size={22} />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-white">GlobalPulse</h1>
-            <div className="flex items-center gap-2">
-              <span className="flex h-2 w-2 rounded-full bg-[#54BBDA] animate-pulse" />
-              <span className="text-[10px] font-semibold text-white/40 uppercase tracking-widest">Biosurveillance Active</span>
+            <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">GlobalPulse</h1>
+            <p className="text-[9px] font-bold text-[#54BBDA] uppercase tracking-widest">Biosurv IA Activo</p>
+          </div>
+        </div>
+
+        <div className="px-4 mb-6">
+          <Button 
+            variant="ghost" 
+            onClick={() => setIsPanelsHidden(true)}
+            className="w-full justify-start gap-3 text-xs font-bold uppercase tracking-wider text-white/50 hover:text-white hover:bg-white/5 py-6"
+          >
+            <PanelLeftClose size={18} />
+            Esconder Paneles
+          </Button>
+        </div>
+
+        <nav className="flex-1 px-4 space-y-2">
+          <NavItem icon={<LayoutDashboard size={20} />} label="Panel de Control" active />
+          <NavItem icon={<Globe size={20} />} label="Mapa Global" />
+          <NavItem icon={<FileText size={20} />} label="Informes" />
+        </nav>
+
+        <div className="p-6 mt-auto border-t border-white/5">
+          <div className="bg-[#1e2025]/40 rounded-2xl p-4 space-y-4">
+            <div className="flex items-center justify-between text-[10px] font-bold text-white/40 uppercase tracking-widest">
+              <span>Estado Global</span>
+              <Activity size={12} className="text-[#54BBDA]" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-white/60">Clústeres Activos</span>
+                <span className="font-bold text-[#54BBDA]">{activeClustersCount}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-white/60">Prioridad Alta</span>
+                <span className="font-bold text-red-500">{highPriorityCount}</span>
+              </div>
             </div>
           </div>
         </div>
+      </aside>
 
-        <div className="flex items-center gap-6 pointer-events-auto">
-          <nav className="hidden md:flex items-center gap-8 text-[11px] font-bold uppercase tracking-[0.2em] text-white/40">
-            <a href="#" className="text-[#54BBDA] hover:text-[#54BBDA]/80 transition-colors">Overview</a>
-            <a href="#" className="hover:text-white transition-colors">Live Feed</a>
-            <a href="#" className="hover:text-white transition-colors">Reports</a>
-            <a href="#" className="hover:text-white transition-colors">Forecasting</a>
-          </nav>
-          <div className="h-8 w-px bg-white/10" />
-          <button className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg text-xs font-bold transition-all backdrop-blur-md">
-            Emergency Console
-          </button>
-        </div>
-      </header>
-
-      {/* Main Map Content */}
-      <main className="flex-1 relative">
-        <WorldMap>
-          <OutbreakHeatmap data={outbreakData} />
-        </WorldMap>
-
-        {/* Sidebar Statistics Panel */}
-        <div className="absolute right-8 bottom-32 w-80 z-20 space-y-4">
-          <StatCard 
-            label="Active Clusters" 
-            value={outbreakData?.outbreakClusters.length.toString() || "--"} 
-            icon={<Activity size={18} />} 
-            color="text-[#54BBDA]"
-          />
-          <StatCard 
-            label="High Priority" 
-            value={outbreakData?.outbreakClusters.filter(c => c.priority === 'High').length.toString() || "--"} 
-            icon={<ShieldAlert size={18} />} 
-            color="text-[#E60000]"
-          />
-          <div className="p-6 bg-[#141518]/60 backdrop-blur-xl border border-white/5 rounded-2xl space-y-4">
-             <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-white/60 uppercase tracking-widest">Regional Insight</h3>
-                <Zap size={14} className="text-[#54BBDA]" />
-             </div>
-             <div className="space-y-3">
-                {outbreakData?.outbreakClusters.slice(0, 3).map((cluster, i) => (
-                  <div key={i} className="flex items-center justify-between group cursor-pointer">
-                    <div className="flex flex-col">
-                      <span className="text-xs font-medium text-white group-hover:text-[#54BBDA] transition-colors">{cluster.diseaseName}</span>
-                      <span className="text-[10px] text-white/40">{cluster.locationDescription.split(',')[0]}</span>
-                    </div>
-                    <div className={cn(
-                      "text-[10px] font-bold px-2 py-1 rounded bg-white/5",
-                      cluster.priority === 'High' ? 'text-red-500' : 'text-orange-500'
-                    )}>
-                      {cluster.intensity}%
-                    </div>
-                  </div>
-                ))}
-             </div>
-             <button className="w-full py-2 bg-[#7381C0]/10 hover:bg-[#7381C0]/20 text-[#7381C0] rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all">
-               View Full Report
-             </button>
+      {/* Contenido Principal (Mapa) */}
+      <main className="flex-1 relative flex flex-col min-w-0">
+        <header className="absolute top-0 left-0 w-full z-20 px-8 py-8 flex justify-between items-start pointer-events-none">
+          <div className="pointer-events-auto">
+            <h2 className="text-sm font-bold text-white/40 uppercase tracking-[0.3em] mb-1">Visualización en Tiempo Real</h2>
+            <p className="text-2xl font-bold">Monitor de Brotes Pandémicos</p>
           </div>
+          
+          {!isPanelsHidden && (
+            <div className="flex gap-4 pointer-events-auto">
+               <div className="px-4 py-2 bg-[#1e2025]/60 backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_#ef4444]" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Alerta de Nivel 4</span>
+               </div>
+            </div>
+          )}
+        </header>
+
+        <div className="flex-1 relative">
+          <WorldMap>
+            <OutbreakHeatmap data={outbreakData} />
+          </WorldMap>
         </div>
 
-        {/* Loading State Overlay */}
+        {/* Panel de Alertas Recientes */}
+        <div 
+          className={cn(
+            "transition-all duration-700 ease-in-out",
+            isPanelsHidden ? "h-0 opacity-0 overflow-hidden" : "h-72 opacity-100"
+          )}
+        >
+          <RecentAlerts outbreaks={outbreakData?.outbreakClusters || []} />
+        </div>
+
+        {/* Overlay de Carga */}
         {isPending && (
-          <div className="absolute inset-0 z-30 bg-[#141518]/40 backdrop-blur-[2px] flex items-center justify-center">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-12 h-12 border-t-2 border-r-2 border-[#54BBDA] rounded-full animate-spin" />
-              <span className="text-xs font-bold text-[#54BBDA] uppercase tracking-widest animate-pulse">Syncing Global Data...</span>
+          <div className="absolute inset-0 z-50 bg-[#0a0a0c]/60 backdrop-blur-md flex items-center justify-center">
+            <div className="flex flex-col items-center gap-6">
+              <div className="relative w-16 h-16">
+                <div className="absolute inset-0 border-4 border-[#54BBDA]/20 rounded-full" />
+                <div className="absolute inset-0 border-t-4 border-[#54BBDA] rounded-full animate-spin" />
+              </div>
+              <span className="text-sm font-bold text-[#54BBDA] uppercase tracking-[0.4em] animate-pulse">Sincronizando Red Global...</span>
             </div>
           </div>
         )}
       </main>
-
-      {/* Date Slider Controls */}
-      <TimelineSlider />
     </div>
   );
 }
 
-function StatCard({ label, value, icon, color }: { label: string, value: string, icon: React.ReactNode, color: string }) {
+function NavItem({ icon, label, active = false }: { icon: React.ReactNode, label: string, active?: boolean }) {
   return (
-    <div className="p-6 bg-[#141518]/60 backdrop-blur-xl border border-white/5 rounded-2xl flex items-center justify-between">
-      <div className="space-y-1">
-        <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{label}</span>
-        <div className={cn("text-2xl font-bold tracking-tight", color)}>{value}</div>
-      </div>
-      <div className={cn("p-3 rounded-xl bg-white/5", color)}>
+    <button 
+      className={cn(
+        "w-full flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-200 group",
+        active 
+          ? "bg-[#54BBDA]/10 text-[#54BBDA]" 
+          : "text-white/40 hover:text-white hover:bg-white/5"
+      )}
+    >
+      <span className={cn(
+        "transition-transform duration-200 group-hover:scale-110",
+        active ? "text-[#54BBDA]" : "text-white/20"
+      )}>
         {icon}
-      </div>
-    </div>
+      </span>
+      <span className="text-sm font-bold tracking-wide uppercase">{label}</span>
+      {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#54BBDA] shadow-[0_0_10px_#54BBDA]" />}
+    </button>
   );
 }

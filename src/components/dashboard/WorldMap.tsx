@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { cn } from "@/lib/utils";
 import { Plus, Minus, Maximize2, MousePointer2 } from "lucide-react";
 
@@ -42,19 +43,17 @@ export function WorldMap({ children }: WorldMapProps) {
     setIsDragging(false);
   };
 
-  // Simplified high-res SVG paths for continents
-  // Real high-res GeoJSON would be better, but this serves as a robust interactive base
   return (
     <div 
       ref={containerRef}
-      className="relative w-full h-full bg-[#141518] overflow-hidden cursor-grab active:cursor-grabbing select-none"
+      className="relative w-full h-full bg-[#0a0a0c] overflow-hidden cursor-grab active:cursor-grabbing select-none"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
       <div 
-        className="absolute inset-0 transition-transform duration-200 ease-out flex items-center justify-center"
+        className="absolute inset-0 transition-transform duration-300 ease-out flex items-center justify-center"
         style={{ 
           transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
           transformOrigin: 'center center'
@@ -62,75 +61,67 @@ export function WorldMap({ children }: WorldMapProps) {
       >
         <svg 
           viewBox="0 0 1000 500" 
-          className="w-full h-auto max-h-full"
+          className="w-full h-auto max-h-full drop-shadow-[0_0_50px_rgba(0,0,0,0.8)]"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Graticule / Grid */}
-          <g className="stroke-white/5 stroke-[0.5] fill-none">
-            {Array.from({ length: 18 }).map((_, i) => (
-              <line key={`v-${i}`} x1={i * (1000 / 18)} y1="0" x2={i * (1000 / 18)} y2="500" />
+          {/* Cuadrícula Refinada */}
+          <g className="stroke-white/[0.03] stroke-[0.3] fill-none">
+            {Array.from({ length: 24 }).map((_, i) => (
+              <line key={`v-${i}`} x1={i * (1000 / 24)} y1="0" x2={i * (1000 / 24)} y2="500" />
             ))}
-            {Array.from({ length: 9 }).map((_, i) => (
-              <line key={`h-${i}`} x1="0" y1={i * (500 / 9)} x2="1000" y2={i * (500 / 9)} />
+            {Array.from({ length: 12 }).map((_, i) => (
+              <line key={`h-${i}`} x1="0" y1={i * (500 / 12)} x2="1000" y2={i * (500 / 12)} />
             ))}
           </g>
 
-          {/* Continents - High Contrast Dark Mode Shapes */}
-          <path 
-            className="fill-[#1e2025] hover:fill-[#252830] transition-colors stroke-[#2a2d35] stroke-[0.5]"
-            d="M200,100 L250,110 L280,150 L300,250 L250,350 L200,400 L150,350 L120,250 L150,150 Z 
-               M400,80 L500,70 L600,80 L700,100 L800,150 L850,250 L800,350 L700,450 L600,420 L500,430 L400,400 L350,300 L370,200 Z
-               M450,250 L500,240 L550,250 L570,300 L550,350 L500,380 L450,350 Z
-               M750,300 L820,310 L850,350 L820,400 L750,390 L730,350 Z" 
-            // Note: These are rough placeholders. In a production app, we would use D3-geo or similar to render paths from GeoJSON.
-          />
-          
-          {/* Detailed SVG Map Paths for visual quality (Illustrative) */}
-          <g className="fill-[#1e2025] stroke-[#2a2d35] stroke-[0.5]">
-            {/* North America */}
-            <path d="M124 104l24 16 12 36-4 44-32 20-36-4-32-40 4-36 32-16 32-20z" />
-            {/* South America */}
-            <path d="M228 268l44 32 8 48-16 48-44 32-48-16-16-60 16-64 56-20z" />
-            {/* Africa */}
-            <path d="M468 184l64-8 48 24 12 60-8 64-44 68-52-12-52-44 4-64 28-88z" />
+          {/* Continentes - Estilo Oscuro y Profesional */}
+          <g className="fill-[#16171a] stroke-white/10 stroke-[0.4]">
+            {/* Norteamérica */}
+            <path d="M124 104l24 16 12 36-4 44-32 20-36-4-32-40 4-36 32-16 32-20z" className="hover:fill-[#1e2025] transition-colors" />
+            {/* Sudamérica */}
+            <path d="M228 268l44 32 8 48-16 48-44 32-48-16-16-60 16-64 56-20z" className="hover:fill-[#1e2025] transition-colors" />
+            {/* África */}
+            <path d="M468 184l64-8 48 24 12 60-8 64-44 68-52-12-52-44 4-64 28-88z" className="hover:fill-[#1e2025] transition-colors" />
             {/* Eurasia */}
-            <path d="M408 104l92-36 120-16 116 28 84 88 12 72-52 68-100-24-96-8-96-36-80-136z" />
+            <path d="M408 104l92-36 120-16 116 28 84 88 12 72-52 68-100-24-96-8-96-36-80-136z" className="hover:fill-[#1e2025] transition-colors" />
             {/* Australia */}
-            <path d="M784 316l56 12 40 44-24 52-64 12-40-36 32-84z" />
-            {/* Greenland */}
-            <path d="M268 32l36 8 20 40-12 36-40 12-32-36 28-60z" />
+            <path d="M784 316l56 12 40 44-24 52-64 12-40-36 32-84z" className="hover:fill-[#1e2025] transition-colors" />
+            {/* Groenlandia */}
+            <path d="M268 32l36 8 20 40-12 36-40 12-32-36 28-60z" className="hover:fill-[#1e2025] transition-colors" />
           </g>
 
-          {/* Children are heatmap clusters rendered at relative coords */}
+          {/* Renderizado de brotes (puntos calientes) */}
           {children}
         </svg>
       </div>
 
-      {/* Subtle Map Controls */}
-      <div className="absolute right-6 top-6 flex flex-col gap-2">
-        <MapControl icon={<Plus size={18} />} onClick={() => handleZoom(0.5)} tooltip="Zoom In" />
-        <MapControl icon={<Minus size={18} />} onClick={() => handleZoom(-0.5)} tooltip="Zoom Out" />
-        <MapControl icon={<Maximize2 size={18} />} onClick={resetMap} tooltip="Reset View" />
-        <div className="h-px bg-white/10 my-2" />
-        <MapControl icon={<MousePointer2 size={18} />} onClick={() => {}} tooltip="Select Layer" active />
+      {/* Controles de Mapa */}
+      <div className="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col gap-3 p-2 bg-[#1e2025]/40 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl">
+        <MapControl icon={<Plus size={18} />} onClick={() => handleZoom(0.5)} tooltip="Aumentar" />
+        <MapControl icon={<Minus size={18} />} onClick={() => handleZoom(-0.5)} tooltip="Disminuir" />
+        <div className="h-px bg-white/10 mx-2" />
+        <MapControl icon={<Maximize2 size={18} />} onClick={resetMap} tooltip="Centrar Vista" />
+        <MapControl icon={<MousePointer2 size={18} />} onClick={() => {}} tooltip="Seleccionar" active />
       </div>
 
-      {/* Legend */}
-      <div className="absolute left-6 bottom-32 flex flex-col gap-3 p-4 bg-[#141518]/80 backdrop-blur-md rounded-xl border border-white/5 shadow-2xl">
-        <h3 className="text-xs font-semibold text-white/50 uppercase tracking-widest">Intensity</h3>
-        <div className="flex items-center gap-3">
-          <div className="w-3 h-3 rounded-full bg-[#FFCC00] shadow-[0_0_8px_#FFCC00]" />
-          <span className="text-xs text-white/80 font-medium">Monitoring</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="w-3 h-3 rounded-full bg-[#FF6600] shadow-[0_0_12px_#FF6600]" />
-          <span className="text-xs text-white/80 font-medium">Active Outbreak</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="w-3 h-3 rounded-full bg-[#E60000] shadow-[0_0_15px_#E60000]" />
-          <span className="text-xs text-white/80 font-medium">High Alert</span>
+      {/* Leyenda Profesional */}
+      <div className="absolute left-8 bottom-8 flex flex-col gap-4 p-6 bg-[#0f1012]/80 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl min-w-[200px]">
+        <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-1">Severidad del Brote</h3>
+        <div className="space-y-3">
+          <LegendItem color="bg-red-600 shadow-[0_0_12px_#ef4444]" label="Alerta Crítica" />
+          <LegendItem color="bg-orange-500 shadow-[0_0_8px_#f97316]" label="Bajo Observación" />
+          <LegendItem color="bg-yellow-400" label="Monitoreo" />
         </div>
       </div>
+    </div>
+  );
+}
+
+function LegendItem({ color, label }: { color: string, label: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className={cn("w-3 h-3 rounded-full", color)} />
+      <span className="text-[11px] font-bold text-white/80 uppercase tracking-tight">{label}</span>
     </div>
   );
 }
@@ -141,10 +132,10 @@ function MapControl({ icon, onClick, tooltip, active = false }: { icon: React.Re
       onClick={onClick}
       title={tooltip}
       className={cn(
-        "w-10 h-10 flex items-center justify-center rounded-lg transition-all border border-white/5",
+        "w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200 border border-white/5",
         active 
-          ? "bg-[#54BBDA] text-[#141518] shadow-[0_0_15px_rgba(84,187,218,0.3)]" 
-          : "bg-[#1e2025]/80 text-white/60 hover:bg-[#252830] hover:text-white"
+          ? "bg-[#54BBDA] text-[#0a0a0c] shadow-[0_0_20px_rgba(84,187,218,0.4)]" 
+          : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white"
       )}
     >
       {icon}
