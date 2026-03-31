@@ -46,7 +46,7 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
         >
           <Popup closeButton={false} offset={[0, -10]}>
             <div className="text-center p-1">
-              <p className="font-black text-[9px] uppercase tracking-widest text-[#54BBDA] mb-0.5">{cluster.locationDescription}</p>
+              <p className="font-black text-[9px] uppercase tracking-widest text-[#22c55e] mb-0.5">{cluster.locationDescription}</p>
               <p className="font-bold text-xs text-white">{cluster.diseaseName}</p>
               <p className="text-[10px] text-white/40 mt-1 uppercase font-bold">{cluster.status}</p>
             </div>
@@ -74,20 +74,20 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
                 </Badge>
                 <DialogTitle className="text-4xl font-black tracking-tighter leading-none">{selectedCluster.diseaseName}</DialogTitle>
                 <p className="text-white/40 text-xs mt-2 uppercase font-bold tracking-widest flex items-center gap-2">
-                   <MapPin size={12} className="text-[#54BBDA]" /> {selectedCluster.locationDescription}
+                   <MapPin size={12} className="text-[#22c55e]" /> {selectedCluster.locationDescription}
                 </p>
               </div>
               
               <div className="p-10 space-y-8">
                 <div className="grid grid-cols-2 gap-8">
-                  <InfoItem icon={<Activity size={18} className="text-[#54BBDA]" />} label="Estado Operativo" value={selectedCluster.status} />
-                  <InfoItem icon={<Calendar size={18} className="text-[#54BBDA]" />} label="Fecha de Registro" value={new Date(selectedCluster.reportedDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} />
-                  <InfoItem icon={<AlertCircle size={18} className="text-[#54BBDA]" />} label="Índice de Intensidad" value={`${selectedCluster.intensity}%`} />
-                  <InfoItem icon={<ShieldAlert size={18} className="text-[#54BBDA]" />} label="Categoría" value={selectedCluster.category} />
+                  <InfoItem icon={<Activity size={18} className="text-[#22c55e]" />} label="Estado Operativo" value={selectedCluster.status} />
+                  <InfoItem icon={<Calendar size={18} className="text-[#22c55e]" />} label="Fecha de Registro" value={new Date(selectedCluster.reportedDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} />
+                  <InfoItem icon={<AlertCircle size={18} className="text-[#22c55e]" />} label="Índice de Intensidad" value={`${selectedCluster.intensity}%`} />
+                  <InfoItem icon={<ShieldAlert size={18} className="text-[#22c55e]" />} label="Categoría" value={selectedCluster.category} />
                 </div>
 
                 <div className="p-6 bg-white/[0.03] rounded-3xl border border-white/5 relative group transition-all hover:bg-white/[0.05]">
-                  <h4 className="text-[10px] font-black text-[#54BBDA] uppercase tracking-[0.3em] mb-3 flex items-center gap-2">
+                  <h4 className="text-[10px] font-black text-[#22c55e] uppercase tracking-[0.3em] mb-3 flex items-center gap-2">
                     <Info size={14} /> Análisis Biosurv España
                   </h4>
                   <p className="text-sm text-white/60 leading-relaxed font-medium">
@@ -104,7 +104,7 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
                     Cerrar
                   </Button>
                   <Button 
-                    className="flex-[2] bg-[#54BBDA] hover:bg-[#54BBDA]/90 text-[#0a0a0c] font-black uppercase tracking-widest h-14 rounded-2xl text-[10px] shadow-[0_0_20px_rgba(84,187,218,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    className="flex-[2] bg-[#22c55e] hover:bg-[#22c55e]/90 text-[#0a0a0c] font-black uppercase tracking-widest h-14 rounded-2xl text-[10px] shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
                     onClick={() => setSelectedCluster(null)}
                   >
                     Activar Protocolo

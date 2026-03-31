@@ -172,7 +172,7 @@ export default function GlobalPulseDashboard() {
           className="absolute top-6 left-6 z-50 bg-[#1e2025]/80 backdrop-blur-md border border-white/10 hover:bg-[#252830] transition-all shadow-2xl rounded-full"
           title="Mostrar Paneles"
         >
-          <Menu size={20} className="text-[#54BBDA]" />
+          <Menu size={20} className="text-[#22c55e]" />
         </Button>
       )}
 
@@ -184,12 +184,12 @@ export default function GlobalPulseDashboard() {
         )}
       >
         <div className="p-8 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#7381C0] to-[#54BBDA] flex items-center justify-center shadow-[0_0_20px_rgba(115,129,192,0.3)]">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#166534] to-[#22c55e] flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.3)]">
             <Globe className="text-[#0a0a0c]" size={22} />
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">VirusAlert</h1>
-            <p className="text-[9px] font-bold text-[#54BBDA] uppercase tracking-widest">Nodos España Activos</p>
+            <p className="text-[9px] font-bold text-[#22c55e] uppercase tracking-widest">Nodos España Activos</p>
           </div>
         </div>
 
@@ -250,12 +250,12 @@ export default function GlobalPulseDashboard() {
           <div className="bg-[#1e2025]/40 rounded-2xl p-4 space-y-4 border border-white/5">
             <div className="flex items-center justify-between text-[10px] font-bold text-white/40 uppercase tracking-widest">
               <span>Estado Península</span>
-              <Activity size={12} className="text-[#54BBDA]" />
+              <Activity size={12} className="text-[#22c55e]" />
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
                 <span className="text-white/60">Focos Activos</span>
-                <span className="font-bold text-[#54BBDA]">{activeClustersCount}</span>
+                <span className="font-bold text-[#22c55e]">{activeClustersCount}</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-white/60">Emergencias</span>
@@ -293,7 +293,7 @@ export default function GlobalPulseDashboard() {
               <div className="max-w-3xl mx-auto bg-[#0c0d0f] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
                 <div className="p-10 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
                   <h3 className="text-2xl font-bold flex items-center gap-4">
-                    <FileText className="text-[#54BBDA]" size={28} />
+                    <FileText className="text-[#22c55e]" size={28} />
                     Reporte de Incidencia Médica
                   </h3>
                 </div>
@@ -302,7 +302,7 @@ export default function GlobalPulseDashboard() {
                     <Label className="text-xs font-black uppercase tracking-widest text-white/40">Descripción del Problema Médico</Label>
                     <Textarea 
                       placeholder="Describa los síntomas observados, duración y gravedad..." 
-                      className="min-h-[150px] bg-white/[0.03] border-white/10 rounded-2xl focus:ring-[#54BBDA] text-base p-6"
+                      className="min-h-[150px] bg-white/[0.03] border-white/10 rounded-2xl focus:ring-[#22c55e] text-base p-6"
                       required
                     />
                   </div>
@@ -337,16 +337,16 @@ export default function GlobalPulseDashboard() {
                     </div>
                   </div>
 
-                  <div className="p-6 bg-[#54BBDA]/5 rounded-3xl border border-[#54BBDA]/10 flex gap-4 items-start">
-                    <AlertCircle className="text-[#54BBDA] shrink-0" size={20} />
-                    <p className="text-xs text-[#54BBDA]/70 font-medium leading-relaxed">
+                  <div className="p-6 bg-[#22c55e]/5 rounded-3xl border border-[#22c55e]/10 flex gap-4 items-start">
+                    <AlertCircle className="text-[#22c55e] shrink-0" size={20} />
+                    <p className="text-xs text-[#22c55e]/70 font-medium leading-relaxed">
                       Este informe será analizado instantáneamente por el motor VirusAlert IA para actualizar los mapas de calor y alertar a los centros de salud regionales de forma automática.
                     </p>
                   </div>
 
                   <Button 
                     type="submit"
-                    className="w-full h-16 bg-[#54BBDA] hover:bg-[#54BBDA]/90 text-[#0a0a0c] font-black uppercase tracking-[0.2em] rounded-2xl text-xs shadow-[0_0_20px_rgba(84,187,218,0.3)]"
+                    className="w-full h-16 bg-[#22c55e] hover:bg-[#22c55e]/90 text-[#0a0a0c] font-black uppercase tracking-[0.2em] rounded-2xl text-xs shadow-[0_0_20px_rgba(34,197,94,0.3)]"
                   >
                     <Send size={18} className="mr-2" /> Enviar Reporte Táctico
                   </Button>
@@ -375,12 +375,12 @@ export default function GlobalPulseDashboard() {
           <div className="absolute inset-0 z-50 bg-[#060608]/80 backdrop-blur-2xl flex items-center justify-center">
             <div className="flex flex-col items-center gap-8">
               <div className="relative w-24 h-24">
-                <div className="absolute inset-0 border-[3px] border-[#54BBDA]/10 rounded-full" />
-                <div className="absolute inset-0 border-t-[3px] border-[#54BBDA] rounded-full animate-spin shadow-[0_0_20px_rgba(84,187,218,0.4)]" />
-                <Globe className="absolute inset-0 m-auto text-[#54BBDA]/50 animate-pulse" size={32} />
+                <div className="absolute inset-0 border-[3px] border-[#22c55e]/10 rounded-full" />
+                <div className="absolute inset-0 border-t-[3px] border-[#22c55e] rounded-full animate-spin shadow-[0_0_20px_rgba(34,197,94,0.4)]" />
+                <Globe className="absolute inset-0 m-auto text-[#22c55e]/50 animate-pulse" size={32} />
               </div>
               <div className="flex flex-col items-center gap-2">
-                <span className="text-[11px] font-black text-[#54BBDA] uppercase tracking-[0.6em] animate-pulse">Analizando Datos España</span>
+                <span className="text-[11px] font-black text-[#22c55e] uppercase tracking-[0.6em] animate-pulse">Analizando Datos España</span>
                 <span className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em]">Sincronizando con nodos regionales...</span>
               </div>
             </div>
@@ -398,18 +398,18 @@ function NavItem({ icon, label, active = false, onClick }: { icon: React.ReactNo
       className={cn(
         "w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group",
         active 
-          ? "bg-[#54BBDA]/10 text-[#54BBDA] shadow-[inset_0_0_20px_rgba(84,187,218,0.05)]" 
+          ? "bg-[#22c55e]/10 text-[#22c55e] shadow-[inset_0_0_20px_rgba(34,197,94,0.05)]" 
           : "text-white/30 hover:text-white hover:bg-white/5"
       )}
     >
       <span className={cn(
         "transition-all duration-300 group-hover:scale-110 group-hover:rotate-3",
-        active ? "text-[#54BBDA] scale-110" : "text-white/20"
+        active ? "text-[#22c55e] scale-110" : "text-white/20"
       )}>
         {icon}
       </span>
       <span className="text-[11px] font-black tracking-widest uppercase">{label}</span>
-      {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#54BBDA] shadow-[0_0_12px_#54BBDA]" />}
+      {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#22c55e] shadow-[0_0_12px_#22c55e]" />}
     </button>
   );
 }

@@ -12,22 +12,22 @@
     --card-foreground: 210 20% 98%;
     --popover: 225 9% 8%;
     --popover-foreground: 210 20% 98%;
-    --primary: 229 39% 60%;
+    --primary: 142 71% 45%;
     --primary-foreground: 225 9% 8%;
     --secondary: 225 9% 15%;
     --secondary-foreground: 210 20% 98%;
     --muted: 225 9% 15%;
     --muted-foreground: 215 20% 65%;
-    --accent: 194 65% 59%;
+    --accent: 142 76% 55%;
     --accent-foreground: 225 9% 8%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 20% 98%;
     --border: 225 9% 18%;
     --input: 225 9% 18%;
-    --ring: 194 65% 59%;
+    --ring: 142 76% 55%;
     --radius: 0.75rem;
-    --chart-1: 194 65% 59%;
-    --chart-2: 229 39% 60%;
+    --chart-1: 142 76% 55%;
+    --chart-2: 142 71% 45%;
     --chart-3: 30 100% 50%;
     --chart-4: 0 100% 45%;
     --chart-5: 280 65% 60%;
@@ -58,7 +58,7 @@
 
 .leaflet-control-zoom-in, .leaflet-control-zoom-out {
   background-color: #1e2025 !important;
-  color: #54BBDA !important;
+  color: #22c55e !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: 8px !important;
   margin-bottom: 4px !important;

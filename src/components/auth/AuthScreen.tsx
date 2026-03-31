@@ -51,12 +51,12 @@ export function AuthScreen() {
   return (
     <div className="h-screen w-screen bg-[#060608] flex items-center justify-center p-4 overflow-hidden relative">
       {/* Fondo Decorativo */}
-      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#54BBDA]/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-[#7381C0]/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#22c55e]/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-[#14532d]/5 rounded-full blur-[120px] pointer-events-none" />
 
       <Card className="w-full max-w-[450px] bg-[#0c0d0f]/80 backdrop-blur-2xl border-white/5 rounded-[2.5rem] shadow-2xl overflow-hidden relative z-10">
         <CardHeader className="pt-12 pb-8 flex flex-col items-center gap-6">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#7381C0] to-[#54BBDA] flex items-center justify-center shadow-[0_0_30px_rgba(84,187,218,0.3)]">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#166534] to-[#22c55e] flex items-center justify-center shadow-[0_0_30px_rgba(34,197,94,0.3)]">
             <Globe className="text-[#0a0a0c]" size={32} />
           </div>
           <div className="text-center space-y-2">
@@ -74,7 +74,7 @@ export function AuthScreen() {
                 <Input 
                   type="email" 
                   placeholder="operador@virusalert.es" 
-                  className="h-14 bg-white/[0.03] border-white/10 rounded-2xl pl-12 text-sm focus:ring-[#54BBDA]"
+                  className="h-14 bg-white/[0.03] border-white/10 rounded-2xl pl-12 text-sm focus:ring-[#22c55e]"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -89,7 +89,7 @@ export function AuthScreen() {
                 <Input 
                   type="password" 
                   placeholder="••••••••" 
-                  className="h-14 bg-white/[0.03] border-white/10 rounded-2xl pl-12 text-sm focus:ring-[#54BBDA]"
+                  className="h-14 bg-white/[0.03] border-white/10 rounded-2xl pl-12 text-sm focus:ring-[#22c55e]"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -126,9 +126,9 @@ export function AuthScreen() {
         </CardContent>
 
         <CardFooter className="pb-12 pt-6 flex flex-col gap-4 items-center">
-          <div className="flex items-center gap-2 px-4 py-1.5 bg-[#54BBDA]/5 border border-[#54BBDA]/10 rounded-full">
-            <ShieldCheck size={12} className="text-[#54BBDA]" />
-            <span className="text-[9px] font-bold text-[#54BBDA] uppercase tracking-tighter">Conexión Encriptada TLS 1.3</span>
+          <div className="flex items-center gap-2 px-4 py-1.5 bg-[#22c55e]/5 border border-[#22c55e]/10 rounded-full">
+            <ShieldCheck size={12} className="text-[#22c55e]" />
+            <span className="text-[9px] font-bold text-[#22c55e] uppercase tracking-tighter">Conexión Encriptada TLS 1.3</span>
           </div>
         </CardFooter>
       </Card>

@@ -28,7 +28,7 @@ export function TimelineSlider({ onDateChange }: TimelineSliderProps) {
       <div className="flex items-center gap-4">
         <button 
           onClick={() => setIsPlaying(!isPlaying)}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-[#7381C0] text-[#141518] hover:bg-[#54BBDA] transition-all"
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-[#15803d] text-[#141518] hover:bg-[#22c55e] transition-all"
         >
           {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
         </button>
@@ -49,7 +49,7 @@ export function TimelineSlider({ onDateChange }: TimelineSliderProps) {
             onValueChange={setValue} 
             max={100} 
             step={1}
-            className="[&_[role=slider]]:bg-[#54BBDA] [&_[role=slider]]:border-[#54BBDA] [&_.relative_h-2]:bg-white/5"
+            className="[&_[role=slider]]:bg-[#22c55e] [&_[role=slider]]:border-[#22c55e] [&_.relative_h-2]:bg-white/5"
           />
         </div>
         <span className="text-[10px] text-white/30 font-medium">Dec 2024</span>
