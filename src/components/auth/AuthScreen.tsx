@@ -20,30 +20,32 @@ export function AuthScreen() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    try {
-      initiateEmailSignIn(auth, email, password);
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error de acceso",
-        description: "No se pudo iniciar sesión. Verifica tus credenciales.",
+    initiateEmailSignIn(auth, email, password)
+      .catch((error: any) => {
+        setIsLoading(false);
+        let message = "No se pudo iniciar sesión. Verifica tus credenciales.";
+        if (error.code === 'auth/invalid-credential') {
+          message = "Email o contraseña incorrectos. Por favor, inténtalo de nuevo.";
+        }
+        toast({
+          variant: "destructive",
+          title: "Error de acceso",
+          description: message,
+        });
       });
-      setIsLoading(false);
-    }
   };
 
   const handleGuestLogin = () => {
     setIsLoading(true);
-    try {
-      initiateAnonymousSignIn(auth);
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error de acceso",
-        description: "No se pudo iniciar sesión como invitado.",
+    initiateAnonymousSignIn(auth)
+      .catch(() => {
+        setIsLoading(false);
+        toast({
+          variant: "destructive",
+          title: "Error de acceso",
+          description: "No se pudo iniciar sesión como invitado.",
+        });
       });
-      setIsLoading(false);
-    }
   };
 
   return (
