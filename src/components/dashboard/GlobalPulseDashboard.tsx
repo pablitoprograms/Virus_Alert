@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useTransition, useEffect } from 'react';
+import React, { useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
-import { identifyOutbreaks, IdentifyOutbreaksOutput } from '@/ai/flows/identify-outbreaks-flow';
 import { 
   LayoutDashboard, 
   Globe, 
@@ -11,21 +10,24 @@ import {
   Activity,
   Menu,
   Send,
-  AlertCircle
+  AlertCircle,
+  LogOut,
+  UserCircle
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useUser, useAuth } from "@/firebase";
+import { signOut } from "firebase/auth";
 
 // Importación dinámica para evitar errores de SSR con Leaflet
 const WorldMap = dynamic(() => import('./WorldMap').then((mod) => mod.WorldMap), {
   ssr: false,
-  loading: () => <div className="w-full h-full bg-[#060608] flex items-center justify-center text-white/20">Cargando mapa táctico...</div>
+  loading: () => <div className="w-full h-full bg-[#060608] flex items-center justify-center text-white/20 text-xs font-black uppercase tracking-[0.4em]">Cargando red satelital...</div>
 });
 
 const OutbreakHeatmap = dynamic(() => import('./OutbreakHeatmap').then((mod) => mod.OutbreakHeatmap), {
@@ -50,7 +52,7 @@ const TIPOS_ENFERMEDAD = [
   "COVID-1.0", "Gripe A", "Bronquitis", "Neumonía Atípica", "Gastroenteritis Viral", "Dengue", "Zika", "Sarampión"
 ];
 
-const MOCK_SPAIN_DATA: IdentifyOutbreaksOutput = {
+const MOCK_SPAIN_DATA = {
   outbreakClusters: [
     {
       diseaseName: "COVID-1.0",
@@ -111,14 +113,16 @@ const MOCK_SPAIN_DATA: IdentifyOutbreaksOutput = {
 };
 
 export default function GlobalPulseDashboard() {
-  const [outbreakData, setOutbreakData] = useState<IdentifyOutbreaksOutput | null>(MOCK_SPAIN_DATA);
+  const [outbreakData] = useState(MOCK_SPAIN_DATA);
   const [isPanelsHidden, setIsPanelsHidden] = useState(false);
   const [currentView, setCurrentView] = useState<DashboardView>('dashboard');
-  const [isPending, startTransition] = useTransition();
+  const [isPending] = useTransition();
   const { toast } = useToast();
+  const { user } = useUser();
+  const auth = useAuth();
 
-  const activeClustersCount = outbreakData?.outbreakClusters.length || 0;
-  const highPriorityCount = outbreakData?.outbreakClusters.filter(c => c.priority === 'High').length || 0;
+  const activeClustersCount = outbreakData.outbreakClusters.length;
+  const highPriorityCount = outbreakData.outbreakClusters.filter(c => c.priority === 'High').length;
 
   const handleNavClick = (view: DashboardView) => {
     setCurrentView(view);
@@ -126,6 +130,22 @@ export default function GlobalPulseDashboard() {
       setIsPanelsHidden(true);
     } else {
       setIsPanelsHidden(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({
+        title: "Sesión Cerrada",
+        description: "Has salido de la terminal GlobalPulse correctamente.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo cerrar la sesión.",
+      });
     }
   };
 
@@ -205,7 +225,28 @@ export default function GlobalPulseDashboard() {
           />
         </nav>
 
-        <div className="p-6 mt-auto border-t border-white/5">
+        {/* Perfil de Usuario y Logout */}
+        <div className="p-4 border-t border-white/5 space-y-4">
+          <div className="bg-white/[0.02] rounded-2xl p-4 flex items-center gap-3 border border-white/5">
+            <div className="w-10 h-10 rounded-full bg-white/[0.05] flex items-center justify-center border border-white/10 shrink-0">
+              <UserCircle size={24} className="text-white/40" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-black uppercase text-white/30 tracking-widest leading-none mb-1">Operador Autenticado</p>
+              <p className="text-xs font-bold text-white/70 truncate">{user?.isAnonymous ? 'Invitado Temporal' : user?.email}</p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            onClick={handleLogout}
+            className="w-full justify-start gap-3 text-red-500 hover:text-red-400 hover:bg-red-500/5 rounded-xl py-6"
+          >
+            <LogOut size={18} />
+            <span className="text-[11px] font-black tracking-widest uppercase">Cerrar Sesión</span>
+          </Button>
+        </div>
+
+        <div className="p-6 border-t border-white/5">
           <div className="bg-[#1e2025]/40 rounded-2xl p-4 space-y-4 border border-white/5">
             <div className="flex items-center justify-between text-[10px] font-bold text-white/40 uppercase tracking-widest">
               <span>Estado Península</span>
@@ -326,7 +367,7 @@ export default function GlobalPulseDashboard() {
             isPanelsHidden ? "h-0 opacity-0 overflow-hidden" : "h-72 opacity-100"
           )}
         >
-          <RecentAlerts outbreaks={outbreakData?.outbreakClusters || []} />
+          <RecentAlerts outbreaks={outbreakData.outbreakClusters} />
         </div>
 
         {/* Overlay de Carga */}
