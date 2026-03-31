@@ -152,15 +152,6 @@ export default function GlobalPulseDashboard() {
   const activeClustersCount = outbreakData.outbreakClusters.length;
   const highPriorityCount = outbreakData.outbreakClusters.filter(c => c.priority === 'High').length;
 
-  const handleNavClick = (view: DashboardView) => {
-    setCurrentView(view);
-    if (view === 'map') {
-      setIsPanelsHidden(true);
-    } else {
-      setIsPanelsHidden(false);
-    }
-  };
-
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -229,10 +220,7 @@ export default function GlobalPulseDashboard() {
         <Button
           variant="secondary"
           size="icon"
-          onClick={() => {
-            setIsPanelsHidden(false);
-            if (currentView === 'map') setCurrentView('dashboard');
-          }}
+          onClick={() => setIsPanelsHidden(false)}
           className="absolute top-6 left-6 z-50 bg-[#1e2025]/80 backdrop-blur-md border border-white/10 hover:bg-[#252830] transition-all shadow-2xl rounded-full"
           title="Mostrar Paneles"
         >
@@ -271,21 +259,21 @@ export default function GlobalPulseDashboard() {
         <nav className="flex-1 px-4 space-y-2">
           <NavItem 
             icon={<LayoutDashboard size={20} />} 
-            label="Panel España" 
+            label="Alertas Recientes" 
             active={currentView === 'dashboard'} 
-            onClick={() => handleNavClick('dashboard')}
+            onClick={() => setCurrentView('dashboard')}
           />
           <NavItem 
             icon={<Globe size={20} />} 
             label="Mapa Táctico" 
             active={currentView === 'map'} 
-            onClick={() => handleNavClick('map')}
+            onClick={() => setCurrentView('map')}
           />
           <NavItem 
             icon={<FileText size={20} />} 
             label="Informes" 
             active={currentView === 'reports'} 
-            onClick={() => handleNavClick('reports')}
+            onClick={() => setCurrentView('reports')}
           />
         </nav>
 
@@ -333,52 +321,43 @@ export default function GlobalPulseDashboard() {
       {/* Contenido Principal */}
       <main className="flex-1 relative flex flex-row min-w-0">
         
-        {/* Columna de Alertas Recientes */}
+        {/* Columna de Alertas Recientes (Solo visible en Dashboard) */}
         <div 
           className={cn(
             "h-full transition-all duration-500 ease-in-out border-r border-white/5 bg-[#0c0d0f]/50 z-30",
-            isPanelsHidden ? "w-0 opacity-0 overflow-hidden" : "w-80 opacity-100"
+            currentView === 'dashboard' ? "w-80 opacity-100" : "w-0 opacity-0 overflow-hidden"
           )}
         >
           <RecentAlerts outbreaks={outbreakData.outbreakClusters} onSelect={(alert) => setSelectedOutbreak(alert)} />
         </div>
 
-        {/* Área del Mapa y Cabecera */}
+        {/* Área del Contenido Variable */}
         <div className="flex-1 relative overflow-hidden bg-[#060608]">
           <header className="absolute top-0 left-0 w-full z-20 px-8 py-8 flex justify-between items-start pointer-events-none">
             <div className="pointer-events-auto">
               <h2 className="text-xs font-black text-white/30 uppercase tracking-[0.4em] mb-1">Vigilancia Nacional</h2>
               <p className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">
-                {currentView === 'dashboard' ? 'Monitor de Brotes Pandémicos' : 
-                 currentView === 'map' ? 'Mapa Táctico España' : 'Central de Informes'}
+                {currentView === 'dashboard' ? 'Alertas Críticas España' : 
+                 currentView === 'map' ? 'Mapa Táctico de Calor' : 'Central de Informes Médicos'}
               </p>
             </div>
-            
-            {!isPanelsHidden && (
-              <div className="flex gap-4 pointer-events-auto">
-                 <div className="px-5 py-2.5 bg-[#1a1b1f]/80 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center gap-3 shadow-2xl">
-                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_12px_#ef4444]" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/80">Alerta Nivel 4: España</span>
-                 </div>
-              </div>
-            )}
           </header>
 
           <div className="w-full h-full relative">
             {currentView === 'reports' ? (
-              <div className="absolute inset-0 bg-[#060608] p-8 pt-36 overflow-auto z-10">
-                <div className="max-w-3xl mx-auto bg-[#0c0d0f] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
+              <div className="absolute inset-0 bg-[#060608] p-8 pt-36 overflow-auto z-10 flex justify-center items-start">
+                <div className="w-full max-w-3xl bg-[#0c0d0f] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
                   <div className="p-10 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
                     <h3 className="text-2xl font-bold flex items-center gap-4">
                       <FileText className="text-[#22c55e]" size={28} />
-                      Reporte de Incidencia Médica
+                      Nuevo Informe de Incidencia
                     </h3>
                   </div>
                   <form onSubmit={handleReportSubmit} className="p-10 space-y-8">
                     <div className="space-y-4">
                       <Label className="text-xs font-black uppercase tracking-widest text-white/40">Descripción del Problema Médico</Label>
                       <Textarea 
-                        placeholder="Describa los síntomas observados, duración y gravedad..." 
+                        placeholder="Describa los síntomas observados, duración y gravedad detectada..." 
                         className="min-h-[150px] bg-white/[0.03] border-white/10 rounded-2xl focus:ring-[#22c55e] text-base p-6"
                         required
                         value={reportDescription}
@@ -391,7 +370,7 @@ export default function GlobalPulseDashboard() {
                         <Label className="text-xs font-black uppercase tracking-widest text-white/40">Tipo de Enfermedad</Label>
                         <Select required value={selectedDisease} onValueChange={setSelectedDisease}>
                           <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl">
-                            <SelectValue placeholder="Seleccionar tipo..." />
+                            <SelectValue placeholder="Seleccionar patógeno..." />
                           </SelectTrigger>
                           <SelectContent className="bg-[#1e2025] border-white/10 text-white">
                             {TIPOS_ENFERMEDAD.map(tipo => (
@@ -402,7 +381,7 @@ export default function GlobalPulseDashboard() {
                       </div>
 
                       <div className="space-y-4">
-                        <Label className="text-xs font-black uppercase tracking-widest text-white/40">Ubicación (Provincias España)</Label>
+                        <Label className="text-xs font-black uppercase tracking-widest text-white/40">Ubicación (Provincia)</Label>
                         <Select required value={selectedProvince} onValueChange={setSelectedProvince}>
                           <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl">
                             <SelectValue placeholder="Seleccionar provincia..." />
@@ -419,7 +398,7 @@ export default function GlobalPulseDashboard() {
                     <div className="p-6 bg-[#22c55e]/5 rounded-3xl border border-[#22c55e]/10 flex gap-4 items-start">
                       <AlertCircle className="text-[#22c55e] shrink-0" size={20} />
                       <p className="text-xs text-[#22c55e]/70 font-medium leading-relaxed">
-                        Este informe será analizado instantáneamente por el motor VirusAlert IA para actualizar los mapas de calor y alertar a los centros de salud regionales de forma automática.
+                        El motor VirusAlert IA procesará este informe para actualizar instantáneamente las coordenadas del mapa táctico y alertar a los centros de salud regionales.
                       </p>
                     </div>
 
@@ -427,7 +406,7 @@ export default function GlobalPulseDashboard() {
                       type="submit"
                       className="w-full h-16 bg-[#22c55e] hover:bg-[#22c55e]/90 text-[#0a0a0c] font-black uppercase tracking-[0.2em] rounded-2xl text-xs shadow-[0_0_20px_rgba(34,197,94,0.3)]"
                     >
-                      <Send size={18} className="mr-2" /> Enviar Reporte Táctico
+                      <Send size={18} className="mr-2" /> Emitir Informe Crítico
                     </Button>
                   </form>
                 </div>
@@ -475,10 +454,10 @@ export default function GlobalPulseDashboard() {
 
                   <div className="p-6 bg-white/[0.03] rounded-3xl border border-white/5 relative group transition-all hover:bg-white/[0.05]">
                     <h4 className="text-[10px] font-black text-[#22c55e] uppercase tracking-[0.3em] mb-3 flex items-center gap-2">
-                      <Info size={14} /> Análisis Biosurv España
+                      <Info size={14} /> Análisis VirusAlert España
                     </h4>
                     <p className="text-sm text-white/60 leading-relaxed font-medium">
-                      Los protocolos de vigilancia en <span className="text-white">{selectedOutbreak.locationDescription}</span> muestran una anomalía de intensidad {selectedOutbreak.intensity}%. Se recomienda activar protocolos regionales de contención fase 2.
+                      Los protocolos de vigilancia en <span className="text-white">{selectedOutbreak.locationDescription}</span> muestran una intensidad del {selectedOutbreak.intensity}%. Se recomienda activar protocolos regionales fase 2 de contención biológica.
                     </p>
                   </div>
 
@@ -513,8 +492,8 @@ export default function GlobalPulseDashboard() {
                 <Globe className="absolute inset-0 m-auto text-[#22c55e]/50 animate-pulse" size={32} />
               </div>
               <div className="flex flex-col items-center gap-2">
-                <span className="text-[11px] font-black text-[#22c55e] uppercase tracking-[0.6em] animate-pulse">Sincronizando Sistema</span>
-                <span className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em]">Actualizando coordenadas de satélite...</span>
+                <span className="text-[11px] font-black text-[#22c55e] uppercase tracking-[0.6em] animate-pulse">Sincronizando VirusAlert</span>
+                <span className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em]">Actualizando coordenadas nacionales...</span>
               </div>
             </div>
           </div>
@@ -529,20 +508,30 @@ function NavItem({ icon, label, active = false, onClick }: { icon: React.ReactNo
     <button 
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group",
+        "w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group relative overflow-hidden",
         active 
           ? "bg-[#22c55e]/10 text-[#22c55e] shadow-[inset_0_0_20px_rgba(34,197,94,0.05)]" 
           : "text-white/30 hover:text-white hover:bg-white/5"
       )}
     >
+      {/* Glow effect for active state */}
+      {active && (
+        <div className="absolute inset-0 bg-gradient-to-r from-[#22c55e]/5 to-transparent pointer-events-none" />
+      )}
+      
       <span className={cn(
-        "transition-all duration-300 group-hover:scale-110 group-hover:rotate-3",
-        active ? "text-[#22c55e] scale-110" : "text-white/20"
+        "transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 relative z-10",
+        active ? "text-[#22c55e] scale-110 drop-shadow-[0_0_8px_#22c55e]" : "text-white/20"
       )}>
         {icon}
       </span>
-      <span className="text-[11px] font-black tracking-widest uppercase">{label}</span>
-      {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#22c55e] shadow-[0_0_12px_#22c55e]" />}
+      <span className={cn(
+        "text-[11px] font-black tracking-widest uppercase relative z-10 transition-all duration-300",
+        active ? "text-[#22c55e] drop-shadow-[0_0_8px_#22c55e]" : ""
+      )}>
+        {label}
+      </span>
+      {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#22c55e] shadow-[0_0_12px_#22c55e] relative z-10" />}
     </button>
   );
 }
