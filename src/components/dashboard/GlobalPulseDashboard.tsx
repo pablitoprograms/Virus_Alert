@@ -3,7 +3,6 @@
 import React, { useState, useTransition, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { identifyOutbreaks, IdentifyOutbreaksOutput } from '@/ai/flows/identify-outbreaks-flow';
-import { RAW_HEALTH_REPORTS } from '@/lib/mock-health-reports';
 import { 
   LayoutDashboard, 
   Globe, 
@@ -11,11 +10,17 @@ import {
   PanelLeftClose, 
   Activity,
   Menu,
+  Send,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 // Importación dinámica para evitar errores de SSR con Leaflet
 const WorldMap = dynamic(() => import('./WorldMap').then((mod) => mod.WorldMap), {
@@ -33,25 +38,84 @@ const RecentAlerts = dynamic(() => import('./RecentAlerts').then((mod) => mod.Re
 
 type DashboardView = 'dashboard' | 'map' | 'reports';
 
+const PROVINCIAS_ESPANA = [
+  "Madrid", "Barcelona", "Valencia", "Sevilla", "Zaragoza", "Málaga", "Murcia", 
+  "Palma", "Las Palmas", "Bilbao", "Alicante", "Córdoba", "Valladolid", "Vigo", 
+  "Gijón", "Hospitalet de Llobregat", "Vitoria", "A Coruña", "Elche", "Granada",
+  "Tarragona", "San Sebastián", "Oviedo", "Santa Cruz de Tenerife", "Pamplona",
+  "Almería", "Fuenlabrada", "Leganés", "San Cristóbal de La Laguna", "Logroño"
+].sort();
+
+const TIPOS_ENFERMEDAD = [
+  "COVID-1.0", "Gripe A", "Bronquitis", "Neumonía Atípica", "Gastroenteritis Viral", "Dengue", "Zika", "Sarampión"
+];
+
+const MOCK_SPAIN_DATA: IdentifyOutbreaksOutput = {
+  outbreakClusters: [
+    {
+      diseaseName: "COVID-1.0",
+      locationDescription: "Madrid, España",
+      latitude: 40.4168,
+      longitude: -3.7038,
+      category: "Viral",
+      priority: "High",
+      intensity: 85,
+      status: "Active",
+      reportedDate: new Date().toISOString()
+    },
+    {
+      diseaseName: "Gripe A",
+      locationDescription: "Barcelona, España",
+      latitude: 41.3851,
+      longitude: 2.1734,
+      category: "Viral",
+      priority: "Medium",
+      intensity: 60,
+      status: "Monitoring",
+      reportedDate: new Date().toISOString()
+    },
+    {
+      diseaseName: "Bronquitis",
+      locationDescription: "Valencia, España",
+      latitude: 39.4699,
+      longitude: -0.3763,
+      category: "Other",
+      priority: "Low",
+      intensity: 40,
+      status: "Contained",
+      reportedDate: new Date().toISOString()
+    },
+    {
+      diseaseName: "Neumonía",
+      locationDescription: "Sevilla, España",
+      latitude: 37.3891,
+      longitude: -5.9845,
+      category: "Bacterial",
+      priority: "High",
+      intensity: 75,
+      status: "New",
+      reportedDate: new Date().toISOString()
+    },
+    {
+      diseaseName: "Gripe Estacional",
+      locationDescription: "Bilbao, España",
+      latitude: 43.2630,
+      longitude: -2.9350,
+      category: "Viral",
+      priority: "Medium",
+      intensity: 55,
+      status: "Active",
+      reportedDate: new Date().toISOString()
+    }
+  ]
+};
+
 export default function GlobalPulseDashboard() {
-  const [outbreakData, setOutbreakData] = useState<IdentifyOutbreaksOutput | null>(null);
+  const [outbreakData, setOutbreakData] = useState<IdentifyOutbreaksOutput | null>(MOCK_SPAIN_DATA);
   const [isPanelsHidden, setIsPanelsHidden] = useState(false);
   const [currentView, setCurrentView] = useState<DashboardView>('dashboard');
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    startTransition(async () => {
-      try {
-        const results = await identifyOutbreaks({
-          rawData: RAW_HEALTH_REPORTS,
-          currentTime: new Date().toISOString()
-        });
-        setOutbreakData(results);
-      } catch (err) {
-        console.error("Error al cargar datos de brotes:", err);
-      }
-    });
-  }, []);
+  const { toast } = useToast();
 
   const activeClustersCount = outbreakData?.outbreakClusters.length || 0;
   const highPriorityCount = outbreakData?.outbreakClusters.filter(c => c.priority === 'High').length || 0;
@@ -63,6 +127,14 @@ export default function GlobalPulseDashboard() {
     } else {
       setIsPanelsHidden(false);
     }
+  };
+
+  const handleReportSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast({
+      title: "Informe Enviado",
+      description: "El reporte médico ha sido registrado y está siendo analizado por Biosurv IA.",
+    });
   };
 
   return (
@@ -97,7 +169,7 @@ export default function GlobalPulseDashboard() {
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">GlobalPulse</h1>
-            <p className="text-[9px] font-bold text-[#54BBDA] uppercase tracking-widest">Biosurv IA Activo</p>
+            <p className="text-[9px] font-bold text-[#54BBDA] uppercase tracking-widest">Nodos España Activos</p>
           </div>
         </div>
 
@@ -115,13 +187,13 @@ export default function GlobalPulseDashboard() {
         <nav className="flex-1 px-4 space-y-2">
           <NavItem 
             icon={<LayoutDashboard size={20} />} 
-            label="Panel de Control" 
+            label="Panel España" 
             active={currentView === 'dashboard'} 
             onClick={() => handleNavClick('dashboard')}
           />
           <NavItem 
             icon={<Globe size={20} />} 
-            label="Mapa Global" 
+            label="Mapa Táctico" 
             active={currentView === 'map'} 
             onClick={() => handleNavClick('map')}
           />
@@ -136,16 +208,16 @@ export default function GlobalPulseDashboard() {
         <div className="p-6 mt-auto border-t border-white/5">
           <div className="bg-[#1e2025]/40 rounded-2xl p-4 space-y-4 border border-white/5">
             <div className="flex items-center justify-between text-[10px] font-bold text-white/40 uppercase tracking-widest">
-              <span>Estado Global</span>
+              <span>Estado Península</span>
               <Activity size={12} className="text-[#54BBDA]" />
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-xs">
-                <span className="text-white/60">Clústeres Activos</span>
+                <span className="text-white/60">Focos Activos</span>
                 <span className="font-bold text-[#54BBDA]">{activeClustersCount}</span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-white/60">Prioridad Alta</span>
+                <span className="text-white/60">Emergencias</span>
                 <span className="font-bold text-red-500">{highPriorityCount}</span>
               </div>
             </div>
@@ -157,10 +229,10 @@ export default function GlobalPulseDashboard() {
       <main className="flex-1 relative flex flex-col min-w-0">
         <header className="absolute top-0 left-0 w-full z-20 px-8 py-8 flex justify-between items-start pointer-events-none">
           <div className="pointer-events-auto">
-            <h2 className="text-xs font-black text-white/30 uppercase tracking-[0.4em] mb-1">Visualización en Tiempo Real</h2>
+            <h2 className="text-xs font-black text-white/30 uppercase tracking-[0.4em] mb-1">Vigilancia Nacional</h2>
             <p className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">
               {currentView === 'dashboard' ? 'Monitor de Brotes Pandémicos' : 
-               currentView === 'map' ? 'Mapa Táctico Global' : 'Base de Datos de Informes'}
+               currentView === 'map' ? 'Mapa Táctico España' : 'Central de Informes'}
             </p>
           </div>
           
@@ -168,7 +240,7 @@ export default function GlobalPulseDashboard() {
             <div className="flex gap-4 pointer-events-auto">
                <div className="px-5 py-2.5 bg-[#1a1b1f]/80 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center gap-3 shadow-2xl">
                   <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_12px_#ef4444]" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white/80">Alerta de Nivel 4</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/80">Alerta Nivel 4: España</span>
                </div>
             </div>
           )}
@@ -177,61 +249,67 @@ export default function GlobalPulseDashboard() {
         <div className="flex-1 relative overflow-hidden bg-[#060608]">
           {currentView === 'reports' ? (
             <div className="absolute inset-0 bg-[#060608] p-8 pt-36 overflow-auto">
-              <div className="max-w-6xl mx-auto bg-[#0c0d0f] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
+              <div className="max-w-3xl mx-auto bg-[#0c0d0f] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
                 <div className="p-10 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
                   <h3 className="text-2xl font-bold flex items-center gap-4">
                     <FileText className="text-[#54BBDA]" size={28} />
-                    Registro Detallado de Brotes
+                    Reporte de Incidencia Médica
                   </h3>
-                  <Badge variant="outline" className="border-[#54BBDA]/20 text-[#54BBDA] px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest">
-                    {outbreakData?.outbreakClusters.length} Registros Activos
-                  </Badge>
                 </div>
-                <Table>
-                  <TableHeader className="bg-white/[0.01]">
-                    <TableRow className="border-white/5 hover:bg-transparent">
-                      <TableHead className="text-white/30 font-black uppercase tracking-widest text-[10px] py-6 pl-10">Enfermedad</TableHead>
-                      <TableHead className="text-white/30 font-black uppercase tracking-widest text-[10px]">Ubicación</TableHead>
-                      <TableHead className="text-white/30 font-black uppercase tracking-widest text-[10px]">Estado</TableHead>
-                      <TableHead className="text-white/30 font-black uppercase tracking-widest text-[10px]">Prioridad</TableHead>
-                      <TableHead className="text-white/30 font-black uppercase tracking-widest text-[10px]">Intensidad</TableHead>
-                      <TableHead className="text-white/30 font-black uppercase tracking-widest text-[10px] pr-10">Fecha</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {outbreakData?.outbreakClusters.map((cluster, i) => (
-                      <TableRow key={i} className="border-white/5 hover:bg-white/[0.03] transition-colors group">
-                        <TableCell className="font-bold text-base pl-10 py-6 group-hover:text-[#54BBDA] transition-colors">{cluster.diseaseName}</TableCell>
-                        <TableCell className="text-white/50 text-xs font-medium">{cluster.locationDescription}</TableCell>
-                        <TableCell>
-                          <span className="text-[10px] font-black text-[#54BBDA] uppercase tracking-widest">{cluster.status}</span>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={cn(
-                            "text-[9px] uppercase font-black px-3 py-1 rounded-md",
-                            cluster.priority === 'High' ? "bg-red-500/10 text-red-500 border-red-500/20" : "bg-orange-500/10 text-orange-500 border-orange-500/20"
-                          )}>
-                            {cluster.priority === 'High' ? 'Crítico' : 'Alerta'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="w-24 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                              <div 
-                                className={cn("h-full transition-all duration-1000", cluster.priority === 'High' ? "bg-red-500" : "bg-orange-500")}
-                                style={{ width: `${cluster.intensity}%` }}
-                              />
-                            </div>
-                            <span className="text-[10px] font-mono font-bold text-white/40">{cluster.intensity}%</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-white/40 text-xs font-mono pr-10">
-                          {new Date(cluster.reportedDate).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <form onSubmit={handleReportSubmit} className="p-10 space-y-8">
+                  <div className="space-y-4">
+                    <Label className="text-xs font-black uppercase tracking-widest text-white/40">Descripción del Problema Médico</Label>
+                    <Textarea 
+                      placeholder="Describa los síntomas observados, duración y gravedad..." 
+                      className="min-h-[150px] bg-white/[0.03] border-white/10 rounded-2xl focus:ring-[#54BBDA] text-base p-6"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <Label className="text-xs font-black uppercase tracking-widest text-white/40">Tipo de Enfermedad</Label>
+                      <Select required>
+                        <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl">
+                          <SelectValue placeholder="Seleccionar tipo..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#1e2025] border-white/10 text-white">
+                          {TIPOS_ENFERMEDAD.map(tipo => (
+                            <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-4">
+                      <Label className="text-xs font-black uppercase tracking-widest text-white/40">Ubicación (Provincias España)</Label>
+                      <Select required>
+                        <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl">
+                          <SelectValue placeholder="Seleccionar provincia..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#1e2025] border-white/10 text-white">
+                          {PROVINCIAS_ESPANA.map(prov => (
+                            <SelectItem key={prov} value={prov}>{prov}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="p-6 bg-[#54BBDA]/5 rounded-3xl border border-[#54BBDA]/10 flex gap-4 items-start">
+                    <AlertCircle className="text-[#54BBDA] shrink-0" size={20} />
+                    <p className="text-xs text-[#54BBDA]/70 font-medium leading-relaxed">
+                      Este informe será analizado instantáneamente por el motor Biosurv IA para actualizar los mapas de calor y alertar a los centros de salud regionales de forma automática.
+                    </p>
+                  </div>
+
+                  <Button 
+                    type="submit"
+                    className="w-full h-16 bg-[#54BBDA] hover:bg-[#54BBDA]/90 text-[#0a0a0c] font-black uppercase tracking-[0.2em] rounded-2xl text-xs shadow-[0_0_20px_rgba(84,187,218,0.3)]"
+                  >
+                    <Send size={18} className="mr-2" /> Enviar Reporte Táctico
+                  </Button>
+                </form>
               </div>
             </div>
           ) : (
@@ -261,8 +339,8 @@ export default function GlobalPulseDashboard() {
                 <Globe className="absolute inset-0 m-auto text-[#54BBDA]/50 animate-pulse" size={32} />
               </div>
               <div className="flex flex-col items-center gap-2">
-                <span className="text-[11px] font-black text-[#54BBDA] uppercase tracking-[0.6em] animate-pulse">Sincronizando Red Global</span>
-                <span className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em]">Accediendo a terminales Biosurv...</span>
+                <span className="text-[11px] font-black text-[#54BBDA] uppercase tracking-[0.6em] animate-pulse">Analizando Datos España</span>
+                <span className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em]">Sincronizando con nodos regionales...</span>
               </div>
             </div>
           </div>

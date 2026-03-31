@@ -1,9 +1,8 @@
-
 "use client";
 
 import React, { useState } from 'react';
 import { IdentifyOutbreaksOutput } from '@/ai/flows/identify-outbreaks-flow';
-import { CircleMarker } from 'react-leaflet';
+import { CircleMarker, Popup } from 'react-leaflet';
 import { cn } from "@/lib/utils";
 import { 
   Dialog, 
@@ -30,21 +29,28 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
         <CircleMarker
           key={idx}
           center={[cluster.latitude, cluster.longitude]}
-          radius={8 + (cluster.intensity / 10)}
+          radius={12 + (cluster.intensity / 8)}
           eventHandlers={{
             click: () => setSelectedCluster(cluster),
           }}
           pathOptions={{
             fillColor: cluster.priority === 'High' ? '#ef4444' : cluster.priority === 'Medium' ? '#f97316' : '#facc15',
-            fillOpacity: 0.8,
+            fillOpacity: 0.9,
             color: 'white',
-            weight: 2,
+            weight: 3,
             className: cn(
               "heatmap-pulse cursor-pointer",
               cluster.priority === 'High' ? "marker-glow-high" : cluster.priority === 'Medium' ? "marker-glow-medium" : "marker-glow-low"
             )
           }}
-        />
+        >
+          <Popup className="bg-[#0c0d0f] border-none">
+            <div className="p-2 text-[#0a0a0c]">
+              <p className="font-black text-[10px] uppercase tracking-widest mb-1">{cluster.locationDescription}</p>
+              <p className="font-bold text-sm text-red-600">{cluster.diseaseName}</p>
+            </div>
+          </Popup>
+        </CircleMarker>
       ))}
 
       <Dialog open={!!selectedCluster} onOpenChange={() => setSelectedCluster(null)}>
@@ -82,10 +88,10 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
 
                 <div className="p-6 bg-white/[0.03] rounded-3xl border border-white/5 relative group transition-all hover:bg-white/[0.05]">
                   <h4 className="text-[10px] font-black text-[#54BBDA] uppercase tracking-[0.3em] mb-3 flex items-center gap-2">
-                    <Info size={14} /> Análisis Biosurv IA
+                    <Info size={14} /> Análisis Biosurv España
                   </h4>
                   <p className="text-sm text-white/60 leading-relaxed font-medium">
-                    Protocolos de detección automatizada sugieren una propagación activa en <span className="text-white">{selectedCluster.locationDescription}</span>. Se requiere monitoreo constante de infraestructuras críticas y centros de salud regionales.
+                    Los protocolos de vigilancia en <span className="text-white">{selectedCluster.locationDescription}</span> muestran una anomalía de intensidad {selectedCluster.intensity}%. Se recomienda activar protocolos regionales de contención fase 2.
                   </p>
                 </div>
 

@@ -71,16 +71,29 @@
 
 @keyframes pulse {
   0%, 100% {
-    opacity: 0.8;
+    opacity: 0.9;
     transform: scale(1);
   }
   50% {
-    opacity: 0.4;
-    transform: scale(1.1);
+    opacity: 0.5;
+    transform: scale(1.15);
   }
 }
 
-/* Custom scrollbar for data-driven panels */
+/* Marker Glows - Intensified */
+.marker-glow-high {
+  filter: drop-shadow(0 0 25px rgba(239, 68, 68, 1)) drop-shadow(0 0 10px rgba(239, 68, 68, 0.8));
+}
+
+.marker-glow-medium {
+  filter: drop-shadow(0 0 20px rgba(249, 115, 22, 1));
+}
+
+.marker-glow-low {
+  filter: drop-shadow(0 0 15px rgba(250, 204, 21, 0.8));
+}
+
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -89,17 +102,4 @@
 }
 ::-webkit-scrollbar-thumb {
   @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
-}
-
-/* Marker Glows */
-.marker-glow-high {
-  filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.8));
-}
-
-.marker-glow-medium {
-  filter: drop-shadow(0 0 15px rgba(249, 115, 22, 0.8));
-}
-
-.marker-glow-low {
-  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.8));
 }
