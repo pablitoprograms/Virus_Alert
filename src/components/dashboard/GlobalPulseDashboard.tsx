@@ -18,15 +18,17 @@ import {
   AlertCircle,
   Clock,
   MapPin,
-  TrendingUp
+  TrendingUp,
+  Settings
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-// REEMPLAZA ESTO CON TU PROPIA GOOGLE MAPS API KEY
-const GOOGLE_MAPS_API_KEY = "TU_API_KEY_AQUI";
+// Utilizamos variables de entorno para la API Key
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
 type DashboardView = 'dashboard' | 'map' | 'reports';
 
@@ -35,6 +37,8 @@ export default function GlobalPulseDashboard() {
   const [isPanelsHidden, setIsPanelsHidden] = useState(false);
   const [currentView, setCurrentView] = useState<DashboardView>('dashboard');
   const [isPending, startTransition] = useTransition();
+
+  const isApiKeyMissing = !GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === "TU_API_KEY_AQUI";
 
   useEffect(() => {
     startTransition(async () => {
@@ -66,7 +70,20 @@ export default function GlobalPulseDashboard() {
     <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
       <div className="relative h-screen w-screen flex bg-[#0a0a0c] text-white overflow-hidden font-body">
         
-        {/* Botón Flotante para Mostrar Paneles (cuando están ocultos) */}
+        {/* Notificación de API Key faltante */}
+        {isApiKeyMissing && !isPanelsHidden && (
+          <div className="absolute top-24 right-8 z-50 w-80 animate-in slide-in-from-right-full duration-500">
+            <Alert variant="destructive" className="bg-red-950/50 border-red-500/50 text-red-200 backdrop-blur-xl">
+              <Settings className="h-4 w-4" />
+              <AlertTitle className="font-bold uppercase tracking-tighter text-xs">Configuración Requerida</AlertTitle>
+              <AlertDescription className="text-[10px] leading-tight opacity-80">
+                Para activar el mapa satelital, añade tu Google Maps API Key en el archivo .env como NEXT_PUBLIC_GOOGLE_MAPS_API_KEY.
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
+        {/* Botón Flotante para Mostrar Paneles */}
         {isPanelsHidden && (
           <Button
             variant="secondary"
@@ -75,14 +92,14 @@ export default function GlobalPulseDashboard() {
               setIsPanelsHidden(false);
               if (currentView === 'map') setCurrentView('dashboard');
             }}
-            className="absolute top-6 left-6 z-50 bg-[#1e2025]/80 backdrop-blur-md border-white/10 hover:bg-[#252830] transition-all shadow-2xl"
+            className="absolute top-6 left-6 z-50 bg-[#1e2025]/80 backdrop-blur-md border-white/10 hover:bg-[#252830] transition-all shadow-2xl rounded-full"
             title="Mostrar Paneles"
           >
             <Menu size={20} className="text-[#54BBDA]" />
           </Button>
         )}
 
-        {/* Barra Lateral de Navegación */}
+        {/* Barra Lateral */}
         <aside 
           className={cn(
             "relative z-40 flex flex-col bg-[#0f1012] border-r border-white/5 transition-all duration-500 ease-in-out shadow-2xl",
