@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useTransition } from 'react';
@@ -40,17 +41,44 @@ const RecentAlerts = dynamic(() => import('./RecentAlerts').then((mod) => mod.Re
 
 type DashboardView = 'dashboard' | 'map' | 'reports';
 
-const PROVINCIAS_ESPANA = [
-  "Madrid", "Barcelona", "Valencia", "Sevilla", "Zaragoza", "Málaga", "Murcia", 
-  "Palma", "Las Palmas", "Bilbao", "Alicante", "Córdoba", "Valladolid", "Vigo", 
-  "Gijón", "Hospitalet de Llobregat", "Vitoria", "A Coruña", "Elche", "Granada",
-  "Tarragona", "San Sebastián", "Oviedo", "Santa Cruz de Tenerife", "Pamplona",
-  "Almería", "Fuenlabrada", "Leganés", "San Cristóbal de La Laguna", "Logroño"
-].sort();
+const PROVINCIA_COORDINATES: Record<string, [number, number]> = {
+  "Madrid": [40.4168, -3.7038],
+  "Barcelona": [41.3851, 2.1734],
+  "Valencia": [39.4699, -0.3763],
+  "Sevilla": [37.3891, -5.9845],
+  "Zaragoza": [41.6488, -0.8891],
+  "Málaga": [36.7213, -4.4214],
+  "Murcia": [37.9922, -1.1307],
+  "Palma": [39.5696, 2.6502],
+  "Las Palmas": [28.1235, -15.4363],
+  "Bilbao": [43.2630, -2.9350],
+  "Alicante": [38.3452, -0.4815],
+  "Córdoba": [37.8882, -4.7794],
+  "Valladolid": [41.6523, -4.7245],
+  "Vigo": [42.2406, -8.7207],
+  "Gijón": [43.5357, -5.6615],
+  "Vitoria": [42.8467, -2.6716],
+  "A Coruña": [43.3623, -8.4115],
+  "Elche": [38.2669, -0.6983],
+  "Granada": [37.1773, -3.5986],
+  "Tarragona": [41.1189, 1.2445],
+  "San Sebastián": [43.3183, -1.9812],
+  "Oviedo": [43.3603, -5.8448],
+  "Santa Cruz de Tenerife": [28.4636, -16.2518],
+  "Pamplona": [42.8125, -1.6458],
+  "Almería": [36.8340, -2.4637],
+  "Fuenlabrada": [40.2842, -3.7939],
+  "Leganés": [40.3275, -3.7635],
+  "San Cristóbal de La Laguna": [28.4871, -16.3159],
+  "Logroño": [42.4627, -2.4450]
+};
 
 const TIPOS_ENFERMEDAD = [
-  "COVID-1.0", "Gripe A", "Bronquitis", "Neumonía Atípica", "Gastroenteritis Viral", "Dengue", "Zika", "Sarampión"
-];
+  "COVID-1.0", "Gripe A (H1N1)", "Bronquitis Aguda", "Neumonía Atípica", 
+  "Gastroenteritis Viral", "Dengue Hemorrágico", "Zika Virus", 
+  "Sarampión", "Malaria Falciparum", "Cólera", "Viruela del Mono", 
+  "Fiebre del Nilo Occidental"
+].sort();
 
 const MOCK_SPAIN_DATA = {
   outbreakClusters: [
@@ -66,7 +94,7 @@ const MOCK_SPAIN_DATA = {
       reportedDate: new Date().toISOString()
     },
     {
-      diseaseName: "Gripe A",
+      diseaseName: "Gripe A (H1N1)",
       locationDescription: "Barcelona, España",
       latitude: 41.3851,
       longitude: 2.1734,
@@ -77,7 +105,7 @@ const MOCK_SPAIN_DATA = {
       reportedDate: new Date().toISOString()
     },
     {
-      diseaseName: "Bronquitis",
+      diseaseName: "Bronquitis Aguda",
       locationDescription: "Valencia, España",
       latitude: 39.4699,
       longitude: -0.3763,
@@ -88,7 +116,7 @@ const MOCK_SPAIN_DATA = {
       reportedDate: new Date().toISOString()
     },
     {
-      diseaseName: "Neumonía",
+      diseaseName: "Neumonía Atípica",
       locationDescription: "Sevilla, España",
       latitude: 37.3891,
       longitude: -5.9845,
@@ -97,29 +125,23 @@ const MOCK_SPAIN_DATA = {
       intensity: 75,
       status: "New",
       reportedDate: new Date().toISOString()
-    },
-    {
-      diseaseName: "Gripe Estacional",
-      locationDescription: "Bilbao, España",
-      latitude: 43.2630,
-      longitude: -2.9350,
-      category: "Viral",
-      priority: "Medium",
-      intensity: 55,
-      status: "Active",
-      reportedDate: new Date().toISOString()
     }
   ]
 };
 
 export default function GlobalPulseDashboard() {
-  const [outbreakData] = useState(MOCK_SPAIN_DATA);
+  const [outbreakData, setOutbreakData] = useState(MOCK_SPAIN_DATA);
   const [isPanelsHidden, setIsPanelsHidden] = useState(false);
   const [currentView, setCurrentView] = useState<DashboardView>('dashboard');
-  const [isPending] = useTransition();
+  const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const { user } = useUser();
   const auth = useAuth();
+
+  // Form states
+  const [reportDescription, setReportDescription] = useState("");
+  const [selectedDisease, setSelectedDisease] = useState("");
+  const [selectedProvince, setSelectedProvince] = useState("");
 
   const activeClustersCount = outbreakData.outbreakClusters.length;
   const highPriorityCount = outbreakData.outbreakClusters.filter(c => c.priority === 'High').length;
@@ -151,9 +173,45 @@ export default function GlobalPulseDashboard() {
 
   const handleReportSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Informe Enviado",
-      description: "El reporte médico ha sido registrado y está siendo analizado por VirusAlert IA.",
+    
+    if (!selectedProvince || !selectedDisease) {
+      toast({
+        variant: "destructive",
+        title: "Datos incompletos",
+        description: "Por favor, selecciona una provincia y un tipo de enfermedad.",
+      });
+      return;
+    }
+
+    startTransition(() => {
+      const coords = PROVINCIA_COORDINATES[selectedProvince];
+      const newOutbreak = {
+        diseaseName: selectedDisease,
+        locationDescription: `${selectedProvince}, España`,
+        latitude: coords[0],
+        longitude: coords[1],
+        category: "Viral" as const,
+        priority: "High" as const,
+        intensity: Math.floor(Math.random() * 40) + 60,
+        status: "New" as const,
+        reportedDate: new Date().toISOString()
+      };
+
+      setOutbreakData(prev => ({
+        ...prev,
+        outbreakClusters: [newOutbreak, ...prev.outbreakClusters]
+      }));
+
+      // Limpiar formulario y volver al panel
+      setReportDescription("");
+      setSelectedDisease("");
+      setSelectedProvince("");
+      setCurrentView('dashboard');
+
+      toast({
+        title: "Informe Procesado",
+        description: `Se ha registrado un nuevo brote de ${selectedDisease} en ${selectedProvince}. El mapa táctico ha sido actualizado.`,
+      });
     });
   };
 
@@ -304,13 +362,15 @@ export default function GlobalPulseDashboard() {
                       placeholder="Describa los síntomas observados, duración y gravedad..." 
                       className="min-h-[150px] bg-white/[0.03] border-white/10 rounded-2xl focus:ring-[#22c55e] text-base p-6"
                       required
+                      value={reportDescription}
+                      onChange={(e) => setReportDescription(e.target.value)}
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-4">
                       <Label className="text-xs font-black uppercase tracking-widest text-white/40">Tipo de Enfermedad</Label>
-                      <Select required>
+                      <Select required value={selectedDisease} onValueChange={setSelectedDisease}>
                         <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl">
                           <SelectValue placeholder="Seleccionar tipo..." />
                         </SelectTrigger>
@@ -324,12 +384,12 @@ export default function GlobalPulseDashboard() {
 
                     <div className="space-y-4">
                       <Label className="text-xs font-black uppercase tracking-widest text-white/40">Ubicación (Provincias España)</Label>
-                      <Select required>
+                      <Select required value={selectedProvince} onValueChange={setSelectedProvince}>
                         <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl">
                           <SelectValue placeholder="Seleccionar provincia..." />
                         </SelectTrigger>
                         <SelectContent className="bg-[#1e2025] border-white/10 text-white">
-                          {PROVINCIAS_ESPANA.map(prov => (
+                          {Object.keys(PROVINCIA_COORDINATES).sort().map(prov => (
                             <SelectItem key={prov} value={prov}>{prov}</SelectItem>
                           ))}
                         </SelectContent>
@@ -380,8 +440,8 @@ export default function GlobalPulseDashboard() {
                 <Globe className="absolute inset-0 m-auto text-[#22c55e]/50 animate-pulse" size={32} />
               </div>
               <div className="flex flex-col items-center gap-2">
-                <span className="text-[11px] font-black text-[#22c55e] uppercase tracking-[0.6em] animate-pulse">Analizando Datos España</span>
-                <span className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em]">Sincronizando con nodos regionales...</span>
+                <span className="text-[11px] font-black text-[#22c55e] uppercase tracking-[0.6em] animate-pulse">Sincronizando Sistema</span>
+                <span className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em]">Actualizando coordenadas de satélite...</span>
               </div>
             </div>
           </div>
