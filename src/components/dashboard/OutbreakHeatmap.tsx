@@ -27,27 +27,27 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
     <>
       {data.outbreakClusters.map((cluster, idx) => (
         <CircleMarker
-          key={idx}
+          key={`${cluster.latitude}-${cluster.longitude}-${idx}`}
           center={[cluster.latitude, cluster.longitude]}
-          radius={12 + (cluster.intensity / 8)}
+          radius={10 + (cluster.intensity / 10)}
           eventHandlers={{
             click: () => setSelectedCluster(cluster),
           }}
           pathOptions={{
             fillColor: cluster.priority === 'High' ? '#ef4444' : cluster.priority === 'Medium' ? '#f97316' : '#facc15',
-            fillOpacity: 0.9,
+            fillOpacity: 1,
             color: 'white',
-            weight: 3,
+            weight: 2,
             className: cn(
               "heatmap-pulse cursor-pointer",
               cluster.priority === 'High' ? "marker-glow-high" : cluster.priority === 'Medium' ? "marker-glow-medium" : "marker-glow-low"
             )
           }}
         >
-          <Popup className="bg-[#0c0d0f] border-none">
-            <div className="p-2 text-[#0a0a0c]">
-              <p className="font-black text-[10px] uppercase tracking-widest mb-1">{cluster.locationDescription}</p>
-              <p className="font-bold text-sm text-red-600">{cluster.diseaseName}</p>
+          <Popup closeButton={false} offset={[0, -10]}>
+            <div className="text-center">
+              <p className="font-black text-[9px] uppercase tracking-widest text-[#54BBDA] mb-0.5">{cluster.locationDescription}</p>
+              <p className="font-bold text-xs text-white">{cluster.diseaseName}</p>
             </div>
           </Popup>
         </CircleMarker>
@@ -61,7 +61,6 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
                 "h-48 p-10 flex flex-col justify-end relative overflow-hidden",
                 selectedCluster.priority === 'High' ? "bg-red-600/10" : "bg-orange-500/10"
               )}>
-                {/* Background Pattern */}
                 <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12">
                    <ShieldAlert size={120} />
                 </div>

@@ -13,8 +13,8 @@ export function WorldMap({ children }: WorldMapProps) {
   return (
     <div className="relative w-full h-full bg-[#0a0a0c] overflow-hidden select-none">
       <MapContainer 
-        center={[40.4168, -3.7038]} // Centrado en Madrid
-        zoom={6} // Zoom enfocado en España
+        center={[40.4168, -3.7038]} // Centrado geográfico en Madrid
+        zoom={6} // Nivel de zoom enfocado en España
         scrollWheelZoom={true}
         className="w-full h-full z-10"
         zoomControl={true}
