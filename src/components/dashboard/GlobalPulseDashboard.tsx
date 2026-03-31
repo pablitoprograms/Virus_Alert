@@ -1,10 +1,7 @@
-
 "use client";
 
 import React, { useState, useTransition, useEffect } from 'react';
-import { WorldMap } from './WorldMap';
-import { OutbreakHeatmap } from './OutbreakHeatmap';
-import { RecentAlerts } from './RecentAlerts';
+import dynamic from 'next/dynamic';
 import { identifyOutbreaks, IdentifyOutbreaksOutput } from '@/ai/flows/identify-outbreaks-flow';
 import { RAW_HEALTH_REPORTS } from '@/lib/mock-health-reports';
 import { 
@@ -14,14 +11,25 @@ import {
   PanelLeftClose, 
   Activity,
   Menu,
-  AlertCircle,
-  Settings,
-  ShieldAlert
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+
+// Importación dinámica para evitar errores de SSR con Leaflet
+const WorldMap = dynamic(() => import('./WorldMap').then((mod) => mod.WorldMap), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-[#060608] flex items-center justify-center text-white/20">Cargando mapa táctico...</div>
+});
+
+const OutbreakHeatmap = dynamic(() => import('./OutbreakHeatmap').then((mod) => mod.OutbreakHeatmap), {
+  ssr: false
+});
+
+const RecentAlerts = dynamic(() => import('./RecentAlerts').then((mod) => mod.RecentAlerts), {
+  ssr: false
+});
 
 type DashboardView = 'dashboard' | 'map' | 'reports';
 
