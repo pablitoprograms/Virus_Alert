@@ -24,7 +24,7 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
 
   if (!data || !data.outbreakClusters) return null;
 
-  // Coordenadas fijas para el viewBox del SVG de 1000x500
+  // Coordenadas para el viewBox del SVG de 1000x500 (Proyección Equirectangular)
   const mapCoords = (lat: number, lng: number) => {
     const x = (lng + 180) * (1000 / 360);
     const y = (90 - lat) * (500 / 180);
@@ -48,13 +48,13 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
               className="cursor-pointer group"
               onClick={() => setSelectedCluster(cluster)}
             >
-              {/* Pulsating Glow - Usando elementos SVG nativos para evitar desplazamientos */}
+              {/* Pulsating Glow */}
               <circle
                 cx={x}
                 cy={y}
                 r={radius * 2}
                 className={cn(
-                  "animate-pulse opacity-20 blur-[8px]",
+                  "animate-pulse opacity-30 blur-[8px]",
                   isHigh ? "fill-red-600" : isMedium ? "fill-orange-500" : "fill-yellow-400"
                 )}
               />
@@ -65,12 +65,12 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
                 cy={y}
                 r={radius / 2}
                 className={cn(
-                  "stroke-white/80 stroke-2 shadow-2xl transition-all duration-300 group-hover:r-8",
+                  "stroke-white/80 stroke-1 shadow-2xl transition-all duration-300 group-hover:scale-125",
                   isHigh ? "fill-red-600" : isMedium ? "fill-orange-500" : "fill-yellow-400"
                 )}
               />
 
-              {/* Invisibile touch target - Larger for mobile */}
+              {/* Invisible touch target */}
               <circle
                 cx={x}
                 cy={y}
@@ -112,7 +112,7 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
                     <Info size={12} /> Análisis de IA
                   </h4>
                   <p className="text-sm text-white/70 leading-relaxed italic">
-                    Detección automatizada basada en informes epidemiológicos. Se recomienda monitoreo constante y despliegue de recursos en {selectedCluster.locationDescription.split(',')[0]}.
+                    Detección automatizada basada en informes epidemiológicos globales. Se recomienda vigilancia activa en {selectedCluster.locationDescription.split(',')[0]}.
                   </p>
                 </div>
 

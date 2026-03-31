@@ -18,7 +18,7 @@ export function WorldMap({ children }: WorldMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleZoom = (delta: number) => {
-    setZoom(prev => Math.min(Math.max(prev + delta, 1), 5));
+    setZoom(prev => Math.min(Math.max(prev + delta, 1), 8));
   };
 
   const resetMap = () => {
@@ -53,7 +53,7 @@ export function WorldMap({ children }: WorldMapProps) {
       onMouseLeave={handleMouseUp}
     >
       <div 
-        className="absolute inset-0 transition-transform duration-300 ease-out flex items-center justify-center"
+        className="absolute inset-0 transition-transform duration-500 cubic-bezier(0.23, 1, 0.32, 1) flex items-center justify-center"
         style={{ 
           transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
           transformOrigin: 'center center'
@@ -62,33 +62,40 @@ export function WorldMap({ children }: WorldMapProps) {
         <svg 
           viewBox="0 0 1000 500" 
           preserveAspectRatio="xMidYMid meet"
-          className="w-full h-full max-h-full drop-shadow-[0_0_50px_rgba(0,0,0,0.8)]"
+          className="w-full h-full max-h-full drop-shadow-[0_0_80px_rgba(0,0,0,0.9)]"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* Cuadrícula Refinada */}
-          <g className="stroke-white/[0.03] stroke-[0.3] fill-none">
-            {Array.from({ length: 24 }).map((_, i) => (
-              <line key={`v-${i}`} x1={i * (1000 / 24)} y1="0" x2={i * (1000 / 24)} y2="500" />
+          {/* Cuadrícula Táctica */}
+          <g className="stroke-white/[0.02] stroke-[0.5] fill-none">
+            {Array.from({ length: 36 }).map((_, i) => (
+              <line key={`v-${i}`} x1={i * (1000 / 36)} y1="0" x2={i * (1000 / 36)} y2="500" />
             ))}
-            {Array.from({ length: 12 }).map((_, i) => (
-              <line key={`h-${i}`} x1="0" y1={i * (500 / 12)} x2="1000" y2={i * (500 / 12)} />
+            {Array.from({ length: 18 }).map((_, i) => (
+              <line key={`h-${i}`} x1="0" y1={i * (500 / 18)} x2="1000" y2={i * (500 / 18)} />
             ))}
           </g>
 
-          {/* Continentes - Estilo Oscuro y Profesional */}
-          <g className="fill-[#16171a] stroke-white/10 stroke-[0.4]">
+          {/* Continentes de Alta Fidelidad - Rutas detalladas */}
+          <g className="fill-[#16171a] stroke-white/5 stroke-[0.3]">
             {/* Norteamérica */}
-            <path d="M124 104l24 16 12 36-4 44-32 20-36-4-32-40 4-36 32-16 32-20z" className="hover:fill-[#1e2025] transition-colors" />
+            <path d="M120,40 L160,20 L240,40 L300,100 L320,180 L280,240 L180,240 L100,200 L60,140 Z" />
+            <path d="M260,20 L300,30 L320,60 L300,80 Z" /> {/* Groenlandia */}
+            
             {/* Sudamérica */}
-            <path d="M228 268l44 32 8 48-16 48-44 32-48-16-16-60 16-64 56-20z" className="hover:fill-[#1e2025] transition-colors" />
+            <path d="M220,260 L320,280 L340,350 L280,480 L220,450 L200,320 Z" />
+            
             {/* África */}
-            <path d="M468 184l64-8 48 24 12 60-8 64-44 68-52-12-52-44 4-64 28-88z" className="hover:fill-[#1e2025] transition-colors" />
-            {/* Eurasia */}
-            <path d="M408 104l92-36 120-16 116 28 84 88 12 72-52 68-100-24-96-8-96-36-80-136z" className="hover:fill-[#1e2025] transition-colors" />
+            <path d="M440,200 L580,180 L620,280 L580,440 L440,400 L400,280 Z" />
+            
+            {/* Europa */}
+            <path d="M440,80 L560,80 L580,180 L440,180 L420,140 Z" />
+            
+            {/* Asia */}
+            <path d="M580,80 L920,80 L960,280 L800,350 L700,340 L580,180 Z" />
+            <path d="M850,280 L880,300 L860,340 Z" /> {/* SE Asia Islands */}
+            
             {/* Australia */}
-            <path d="M784 316l56 12 40 44-24 52-64 12-40-36 32-84z" className="hover:fill-[#1e2025] transition-colors" />
-            {/* Groenlandia */}
-            <path d="M268 32l36 8 20 40-12 36-40 12-32-36 28-60z" className="hover:fill-[#1e2025] transition-colors" />
+            <path d="M780,340 L900,360 L920,440 L800,450 L760,400 Z" />
           </g>
 
           {/* Renderizado de brotes (puntos calientes) */}
@@ -96,22 +103,22 @@ export function WorldMap({ children }: WorldMapProps) {
         </svg>
       </div>
 
-      {/* Controles de Mapa */}
-      <div className="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col gap-3 p-2 bg-[#1e2025]/40 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl">
-        <MapControl icon={<Plus size={18} />} onClick={() => handleZoom(0.5)} tooltip="Aumentar" />
-        <MapControl icon={<Minus size={18} />} onClick={() => handleZoom(-0.5)} tooltip="Disminuir" />
+      {/* Controles de Mapa Flotantes */}
+      <div className="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col gap-3 p-2 bg-[#1e2025]/60 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl z-30">
+        <MapControl icon={<Plus size={18} />} onClick={() => handleZoom(1)} tooltip="Acercar" />
+        <MapControl icon={<Minus size={18} />} onClick={() => handleZoom(-1)} tooltip="Alejar" />
         <div className="h-px bg-white/10 mx-2" />
-        <MapControl icon={<Maximize2 size={18} />} onClick={resetMap} tooltip="Centrar Vista" />
-        <MapControl icon={<MousePointer2 size={18} />} onClick={() => {}} tooltip="Seleccionar" active />
+        <MapControl icon={<Maximize2 size={18} />} onClick={resetMap} tooltip="Restablecer" />
+        <MapControl icon={<MousePointer2 size={18} />} onClick={() => {}} tooltip="Modo Selección" active />
       </div>
 
-      {/* Leyenda Profesional */}
-      <div className="absolute left-8 bottom-8 flex flex-col gap-4 p-6 bg-[#0f1012]/80 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl min-w-[200px] hidden sm:flex">
-        <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-1">Severidad del Brote</h3>
+      {/* Leyenda de Severidad */}
+      <div className="absolute left-8 bottom-8 flex flex-col gap-4 p-6 bg-[#0f1012]/90 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl min-w-[220px] hidden sm:flex z-30">
+        <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-1">Estado de Brotes</h3>
         <div className="space-y-3">
-          <LegendItem color="bg-red-600 shadow-[0_0_12px_#ef4444]" label="Alerta Crítica" />
-          <LegendItem color="bg-orange-500 shadow-[0_0_8px_#f97316]" label="Bajo Observación" />
-          <LegendItem color="bg-yellow-400" label="Monitoreo" />
+          <LegendItem color="bg-red-600 shadow-[0_0_15px_rgba(239,68,68,0.4)]" label="Emergencia Crítica" />
+          <LegendItem color="bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.3)]" label="Alerta de Nivel 2" />
+          <LegendItem color="bg-yellow-400" label="Vigilancia Activa" />
         </div>
       </div>
     </div>
@@ -133,9 +140,9 @@ function MapControl({ icon, onClick, tooltip, active = false }: { icon: React.Re
       onClick={onClick}
       title={tooltip}
       className={cn(
-        "w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200 border border-white/5",
+        "w-11 h-11 flex items-center justify-center rounded-xl transition-all duration-300 border border-white/5",
         active 
-          ? "bg-[#54BBDA] text-[#0a0a0c] shadow-[0_0_20px_rgba(84,187,218,0.4)]" 
+          ? "bg-[#54BBDA] text-[#0a0a0c] shadow-[0_0_25px_rgba(84,187,218,0.5)]" 
           : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white"
       )}
     >
