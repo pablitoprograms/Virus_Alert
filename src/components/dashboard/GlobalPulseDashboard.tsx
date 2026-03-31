@@ -16,10 +16,8 @@ import {
   Activity,
   Menu,
   AlertCircle,
-  Clock,
-  MapPin,
-  TrendingUp,
-  Settings
+  Settings,
+  ExternalLink
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,7 +25,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-// Utilizamos variables de entorno para la API Key
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
 type DashboardView = 'dashboard' | 'map' | 'reports';
@@ -38,7 +35,7 @@ export default function GlobalPulseDashboard() {
   const [currentView, setCurrentView] = useState<DashboardView>('dashboard');
   const [isPending, startTransition] = useTransition();
 
-  const isApiKeyMissing = !GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === "TU_API_KEY_AQUI";
+  const isApiKeyInvalid = !GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === "TU_API_KEY_AQUI";
 
   useEffect(() => {
     startTransition(async () => {
@@ -68,17 +65,29 @@ export default function GlobalPulseDashboard() {
 
   return (
     <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-      <div className="relative h-screen w-screen flex bg-[#0a0a0c] text-white overflow-hidden font-body">
+      <div className="relative h-screen w-screen flex bg-[#060608] text-white overflow-hidden font-body">
         
-        {/* Notificación de API Key faltante */}
-        {isApiKeyMissing && !isPanelsHidden && (
-          <div className="absolute top-24 right-8 z-50 w-80 animate-in slide-in-from-right-full duration-500">
-            <Alert variant="destructive" className="bg-red-950/50 border-red-500/50 text-red-200 backdrop-blur-xl">
-              <Settings className="h-4 w-4" />
-              <AlertTitle className="font-bold uppercase tracking-tighter text-xs">Configuración Requerida</AlertTitle>
-              <AlertDescription className="text-[10px] leading-tight opacity-80">
-                Para activar el mapa satelital, añade tu Google Maps API Key en el archivo .env como NEXT_PUBLIC_GOOGLE_MAPS_API_KEY.
-              </AlertDescription>
+        {/* Notificación de Error de Configuración de API */}
+        {(isApiKeyInvalid || true) && !isPanelsHidden && currentView !== 'reports' && (
+          <div className="absolute top-24 right-8 z-50 w-96 animate-in slide-in-from-right-full duration-700">
+            <Alert variant="destructive" className="bg-[#1a1010]/90 backdrop-blur-2xl border-red-500/30 text-red-200 shadow-2xl rounded-2xl p-6">
+              <Settings className="h-5 w-5 mt-1" />
+              <div className="space-y-3">
+                <AlertTitle className="font-black uppercase tracking-widest text-[10px] text-red-400">Error de Configuración Detectado</AlertTitle>
+                <AlertDescription className="text-xs leading-relaxed opacity-90">
+                  <p className="mb-2">El mapa requiere que la <strong>Maps JavaScript API</strong> esté habilitada en tu Google Cloud Console.</p>
+                  <ol className="list-decimal list-inside space-y-1 opacity-70 mb-3">
+                    <li>Ve a Google Cloud Console.</li>
+                    <li>Habilita "Maps JavaScript API".</li>
+                    <li>Asegura que la API Key esté en tu archivo .env</li>
+                  </ol>
+                  <Button variant="outline" size="sm" className="w-full text-[10px] h-8 bg-red-500/10 border-red-500/20 hover:bg-red-500/20 text-red-200" asChild>
+                    <a href="https://console.cloud.google.com/google/maps-apis/library/maps-backend.googleapis.com" target="_blank" rel="noopener noreferrer">
+                      Habilitar API ahora <ExternalLink size={10} className="ml-2" />
+                    </a>
+                  </Button>
+                </AlertDescription>
+              </div>
             </Alert>
           </div>
         )}
@@ -92,7 +101,7 @@ export default function GlobalPulseDashboard() {
               setIsPanelsHidden(false);
               if (currentView === 'map') setCurrentView('dashboard');
             }}
-            className="absolute top-6 left-6 z-50 bg-[#1e2025]/80 backdrop-blur-md border-white/10 hover:bg-[#252830] transition-all shadow-2xl rounded-full"
+            className="absolute top-6 left-6 z-50 bg-[#1e2025]/80 backdrop-blur-md border border-white/10 hover:bg-[#252830] transition-all shadow-2xl rounded-full"
             title="Mostrar Paneles"
           >
             <Menu size={20} className="text-[#54BBDA]" />
@@ -102,7 +111,7 @@ export default function GlobalPulseDashboard() {
         {/* Barra Lateral */}
         <aside 
           className={cn(
-            "relative z-40 flex flex-col bg-[#0f1012] border-r border-white/5 transition-all duration-500 ease-in-out shadow-2xl",
+            "relative z-40 flex flex-col bg-[#0c0d0f] border-r border-white/5 transition-all duration-500 ease-in-out shadow-2xl",
             isPanelsHidden ? "w-0 -translate-x-full opacity-0 overflow-hidden" : "w-72 translate-x-0 opacity-100"
           )}
         >
@@ -120,7 +129,7 @@ export default function GlobalPulseDashboard() {
             <Button 
               variant="ghost" 
               onClick={() => setIsPanelsHidden(true)}
-              className="w-full justify-start gap-3 text-xs font-bold uppercase tracking-wider text-white/50 hover:text-white hover:bg-white/5 py-6"
+              className="w-full justify-start gap-3 text-xs font-bold uppercase tracking-wider text-white/50 hover:text-white hover:bg-white/5 py-6 rounded-xl"
             >
               <PanelLeftClose size={18} />
               Esconder Paneles
@@ -149,7 +158,7 @@ export default function GlobalPulseDashboard() {
           </nav>
 
           <div className="p-6 mt-auto border-t border-white/5">
-            <div className="bg-[#1e2025]/40 rounded-2xl p-4 space-y-4">
+            <div className="bg-[#1e2025]/40 rounded-2xl p-4 space-y-4 border border-white/5">
               <div className="flex items-center justify-between text-[10px] font-bold text-white/40 uppercase tracking-widest">
                 <span>Estado Global</span>
                 <Activity size={12} className="text-[#54BBDA]" />
@@ -172,8 +181,8 @@ export default function GlobalPulseDashboard() {
         <main className="flex-1 relative flex flex-col min-w-0">
           <header className="absolute top-0 left-0 w-full z-20 px-8 py-8 flex justify-between items-start pointer-events-none">
             <div className="pointer-events-auto">
-              <h2 className="text-sm font-bold text-white/40 uppercase tracking-[0.3em] mb-1">Visualización en Tiempo Real</h2>
-              <p className="text-2xl font-bold">
+              <h2 className="text-xs font-black text-white/30 uppercase tracking-[0.4em] mb-1">Visualización en Tiempo Real</h2>
+              <p className="text-3xl font-bold tracking-tight">
                 {currentView === 'dashboard' ? 'Monitor de Brotes Pandémicos' : 
                  currentView === 'map' ? 'Mapa Táctico Global' : 'Base de Datos de Informes'}
               </p>
@@ -181,67 +190,67 @@ export default function GlobalPulseDashboard() {
             
             {!isPanelsHidden && (
               <div className="flex gap-4 pointer-events-auto">
-                 <div className="px-4 py-2 bg-[#1e2025]/60 backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_#ef4444]" />
-                    <span className="text-xs font-bold uppercase tracking-wider">Alerta de Nivel 4</span>
+                 <div className="px-5 py-2.5 bg-[#1a1b1f]/80 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center gap-3 shadow-2xl">
+                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_12px_#ef4444]" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white/80">Alerta de Nivel 4</span>
                  </div>
               </div>
             )}
           </header>
 
-          <div className="flex-1 relative overflow-hidden">
+          <div className="flex-1 relative overflow-hidden bg-[#060608]">
             {currentView === 'reports' ? (
-              <div className="absolute inset-0 bg-[#0a0a0c] p-8 pt-32 overflow-auto">
-                <div className="max-w-6xl mx-auto bg-[#0f1012] border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
-                  <div className="p-8 border-b border-white/5 bg-white/2 flex items-center justify-between">
-                    <h3 className="text-xl font-bold flex items-center gap-3">
-                      <FileText className="text-[#54BBDA]" />
+              <div className="absolute inset-0 bg-[#060608] p-8 pt-36 overflow-auto">
+                <div className="max-w-6xl mx-auto bg-[#0c0d0f] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
+                  <div className="p-10 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+                    <h3 className="text-2xl font-bold flex items-center gap-4">
+                      <FileText className="text-[#54BBDA]" size={28} />
                       Registro Detallado de Brotes
                     </h3>
-                    <Badge variant="outline" className="border-[#54BBDA]/20 text-[#54BBDA]">
+                    <Badge variant="outline" className="border-[#54BBDA]/20 text-[#54BBDA] px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest">
                       {outbreakData?.outbreakClusters.length} Registros Activos
                     </Badge>
                   </div>
                   <Table>
-                    <TableHeader className="bg-white/2">
+                    <TableHeader className="bg-white/[0.01]">
                       <TableRow className="border-white/5 hover:bg-transparent">
-                        <TableHead className="text-white/40 font-bold uppercase tracking-tighter text-[10px]">Enfermedad</TableHead>
-                        <TableHead className="text-white/40 font-bold uppercase tracking-tighter text-[10px]">Ubicación</TableHead>
-                        <TableHead className="text-white/40 font-bold uppercase tracking-tighter text-[10px]">Estado</TableHead>
-                        <TableHead className="text-white/40 font-bold uppercase tracking-tighter text-[10px]">Prioridad</TableHead>
-                        <TableHead className="text-white/40 font-bold uppercase tracking-tighter text-[10px]">Intensidad</TableHead>
-                        <TableHead className="text-white/40 font-bold uppercase tracking-tighter text-[10px]">Fecha</TableHead>
+                        <TableHead className="text-white/30 font-black uppercase tracking-widest text-[10px] py-6 pl-10">Enfermedad</TableHead>
+                        <TableHead className="text-white/30 font-black uppercase tracking-widest text-[10px]">Ubicación</TableHead>
+                        <TableHead className="text-white/30 font-black uppercase tracking-widest text-[10px]">Estado</TableHead>
+                        <TableHead className="text-white/30 font-black uppercase tracking-widest text-[10px]">Prioridad</TableHead>
+                        <TableHead className="text-white/30 font-black uppercase tracking-widest text-[10px]">Intensidad</TableHead>
+                        <TableHead className="text-white/30 font-black uppercase tracking-widest text-[10px] pr-10">Fecha</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {outbreakData?.outbreakClusters.map((cluster, i) => (
-                        <TableRow key={i} className="border-white/5 hover:bg-white/2 transition-colors">
-                          <TableCell className="font-bold text-sm">{cluster.diseaseName}</TableCell>
-                          <TableCell className="text-white/60 text-xs">{cluster.locationDescription}</TableCell>
+                        <TableRow key={i} className="border-white/5 hover:bg-white/[0.03] transition-colors group">
+                          <TableCell className="font-bold text-base pl-10 py-6 group-hover:text-[#54BBDA] transition-colors">{cluster.diseaseName}</TableCell>
+                          <TableCell className="text-white/50 text-xs font-medium">{cluster.locationDescription}</TableCell>
                           <TableCell>
-                            <span className="text-[10px] font-bold text-[#54BBDA] uppercase tracking-wider">{cluster.status}</span>
+                            <span className="text-[10px] font-black text-[#54BBDA] uppercase tracking-widest">{cluster.status}</span>
                           </TableCell>
                           <TableCell>
                             <Badge className={cn(
-                              "text-[9px] uppercase",
+                              "text-[9px] uppercase font-black px-3 py-1 rounded-md",
                               cluster.priority === 'High' ? "bg-red-500/10 text-red-500 border-red-500/20" : "bg-orange-500/10 text-orange-500 border-orange-500/20"
                             )}>
                               {cluster.priority === 'High' ? 'Crítico' : 'Alerta'}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <div className="flex items-center gap-3">
+                              <div className="w-24 h-1.5 bg-white/5 rounded-full overflow-hidden">
                                 <div 
-                                  className={cn("h-full", cluster.priority === 'High' ? "bg-red-500" : "bg-orange-500")}
+                                  className={cn("h-full transition-all duration-1000", cluster.priority === 'High' ? "bg-red-500" : "bg-orange-500")}
                                   style={{ width: `${cluster.intensity}%` }}
                                 />
                               </div>
-                              <span className="text-xs font-mono">{cluster.intensity}%</span>
+                              <span className="text-[10px] font-mono font-bold text-white/40">{cluster.intensity}%</span>
                             </div>
                           </TableCell>
-                          <TableCell className="text-white/40 text-xs font-mono">
-                            {new Date(cluster.reportedDate).toLocaleDateString('es-ES')}
+                          <TableCell className="text-white/40 text-xs font-mono pr-10">
+                            {new Date(cluster.reportedDate).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -259,7 +268,7 @@ export default function GlobalPulseDashboard() {
           {/* Panel de Alertas Recientes */}
           <div 
             className={cn(
-              "transition-all duration-700 ease-in-out",
+              "transition-all duration-1000 ease-in-out",
               isPanelsHidden ? "h-0 opacity-0 overflow-hidden" : "h-72 opacity-100"
             )}
           >
@@ -268,13 +277,17 @@ export default function GlobalPulseDashboard() {
 
           {/* Overlay de Carga */}
           {isPending && (
-            <div className="absolute inset-0 z-50 bg-[#0a0a0c]/60 backdrop-blur-md flex items-center justify-center">
-              <div className="flex flex-col items-center gap-6">
-                <div className="relative w-16 h-16">
-                  <div className="absolute inset-0 border-4 border-[#54BBDA]/20 rounded-full" />
-                  <div className="absolute inset-0 border-t-4 border-[#54BBDA] rounded-full animate-spin" />
+            <div className="absolute inset-0 z-50 bg-[#060608]/80 backdrop-blur-2xl flex items-center justify-center">
+              <div className="flex flex-col items-center gap-8">
+                <div className="relative w-24 h-24">
+                  <div className="absolute inset-0 border-[3px] border-[#54BBDA]/10 rounded-full" />
+                  <div className="absolute inset-0 border-t-[3px] border-[#54BBDA] rounded-full animate-spin shadow-[0_0_20px_rgba(84,187,218,0.4)]" />
+                  <Globe className="absolute inset-0 m-auto text-[#54BBDA]/50 animate-pulse" size={32} />
                 </div>
-                <span className="text-sm font-bold text-[#54BBDA] uppercase tracking-[0.4em] animate-pulse">Sincronizando Red Global...</span>
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-[11px] font-black text-[#54BBDA] uppercase tracking-[0.6em] animate-pulse">Sincronizando Red Global</span>
+                  <span className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em]">Accediendo a terminales Biosurv...</span>
+                </div>
               </div>
             </div>
           )}
@@ -289,20 +302,20 @@ function NavItem({ icon, label, active = false, onClick }: { icon: React.ReactNo
     <button 
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-200 group",
+        "w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group",
         active 
-          ? "bg-[#54BBDA]/10 text-[#54BBDA]" 
-          : "text-white/40 hover:text-white hover:bg-white/5"
+          ? "bg-[#54BBDA]/10 text-[#54BBDA] shadow-[inset_0_0_20px_rgba(84,187,218,0.05)]" 
+          : "text-white/30 hover:text-white hover:bg-white/5"
       )}
     >
       <span className={cn(
-        "transition-transform duration-200 group-hover:scale-110",
-        active ? "text-[#54BBDA]" : "text-white/20"
+        "transition-all duration-300 group-hover:scale-110 group-hover:rotate-3",
+        active ? "text-[#54BBDA] scale-110" : "text-white/20"
       )}>
         {icon}
       </span>
-      <span className="text-sm font-bold tracking-wide uppercase">{label}</span>
-      {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#54BBDA] shadow-[0_0_10px_#54BBDA]" />}
+      <span className="text-[11px] font-black tracking-widest uppercase">{label}</span>
+      {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#54BBDA] shadow-[0_0_12px_#54BBDA]" />}
     </button>
   );
 }
