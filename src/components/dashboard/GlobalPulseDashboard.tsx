@@ -13,7 +13,11 @@ import {
   Send,
   AlertCircle,
   LogOut,
-  UserCircle
+  UserCircle,
+  MapPin,
+  Calendar,
+  Info,
+  ShieldAlert
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -21,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useAuth } from "@/firebase";
 import { signOut } from "firebase/auth";
@@ -133,6 +138,7 @@ export default function GlobalPulseDashboard() {
   const [outbreakData, setOutbreakData] = useState(MOCK_SPAIN_DATA);
   const [isPanelsHidden, setIsPanelsHidden] = useState(false);
   const [currentView, setCurrentView] = useState<DashboardView>('dashboard');
+  const [selectedOutbreak, setSelectedOutbreak] = useState<any | null>(null);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const { user } = useUser();
@@ -327,14 +333,14 @@ export default function GlobalPulseDashboard() {
       {/* Contenido Principal */}
       <main className="flex-1 relative flex flex-row min-w-0">
         
-        {/* Columna de Alertas Recientes (Ahora a la izquierda) */}
+        {/* Columna de Alertas Recientes */}
         <div 
           className={cn(
             "h-full transition-all duration-500 ease-in-out border-r border-white/5 bg-[#0c0d0f]/50 z-30",
             isPanelsHidden ? "w-0 opacity-0 overflow-hidden" : "w-80 opacity-100"
           )}
         >
-          <RecentAlerts outbreaks={outbreakData.outbreakClusters} />
+          <RecentAlerts outbreaks={outbreakData.outbreakClusters} onSelect={(alert) => setSelectedOutbreak(alert)} />
         </div>
 
         {/* Área del Mapa y Cabecera */}
@@ -428,11 +434,74 @@ export default function GlobalPulseDashboard() {
               </div>
             ) : (
               <WorldMap>
-                <OutbreakHeatmap data={outbreakData} />
+                <OutbreakHeatmap data={outbreakData} onSelectCluster={(cluster) => setSelectedOutbreak(cluster)} />
               </WorldMap>
             )}
           </div>
         </div>
+
+        {/* Diálogo de Detalles de Brote (Universal) */}
+        <Dialog open={!!selectedOutbreak} onOpenChange={() => setSelectedOutbreak(null)}>
+          <DialogContent className="bg-[#0c0d0f] border-white/10 text-white max-w-lg rounded-[2.5rem] overflow-hidden p-0 shadow-[0_48px_96px_rgba(0,0,0,0.8)] border-white/5">
+            {selectedOutbreak && (
+              <div className="flex flex-col">
+                <div className={cn(
+                  "h-48 p-10 flex flex-col justify-end relative overflow-hidden",
+                  selectedOutbreak.priority === 'High' ? "bg-red-600/10" : "bg-orange-500/10"
+                )}>
+                  <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12">
+                     <ShieldAlert size={120} />
+                  </div>
+                  
+                  <Badge className={cn(
+                    "w-fit mb-4 uppercase font-black tracking-[0.2em] px-4 py-1.5 rounded-lg text-[9px]",
+                    selectedOutbreak.priority === 'High' ? "bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.4)]" : "bg-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.4)]"
+                  )}>
+                    {selectedOutbreak.priority === 'High' ? 'Nivel Crítico' : 'Alerta de Vigilancia'}
+                  </Badge>
+                  <DialogTitle className="text-4xl font-black tracking-tighter leading-none">{selectedOutbreak.diseaseName}</DialogTitle>
+                  <p className="text-white/40 text-xs mt-2 uppercase font-bold tracking-widest flex items-center gap-2">
+                     <MapPin size={12} className="text-[#22c55e]" /> {selectedOutbreak.locationDescription}
+                  </p>
+                </div>
+                
+                <div className="p-10 space-y-8">
+                  <div className="grid grid-cols-2 gap-8">
+                    <InfoItem icon={<Activity size={18} className="text-[#22c55e]" />} label="Estado Operativo" value={selectedOutbreak.status} />
+                    <InfoItem icon={<Calendar size={18} className="text-[#22c55e]" />} label="Fecha de Registro" value={new Date(selectedOutbreak.reportedDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} />
+                    <InfoItem icon={<AlertCircle size={18} className="text-[#22c55e]" />} label="Índice de Intensidad" value={`${selectedOutbreak.intensity}%`} />
+                    <InfoItem icon={<ShieldAlert size={18} className="text-[#22c55e]" />} label="Categoría" value={selectedOutbreak.category} />
+                  </div>
+
+                  <div className="p-6 bg-white/[0.03] rounded-3xl border border-white/5 relative group transition-all hover:bg-white/[0.05]">
+                    <h4 className="text-[10px] font-black text-[#22c55e] uppercase tracking-[0.3em] mb-3 flex items-center gap-2">
+                      <Info size={14} /> Análisis Biosurv España
+                    </h4>
+                    <p className="text-sm text-white/60 leading-relaxed font-medium">
+                      Los protocolos de vigilancia en <span className="text-white">{selectedOutbreak.locationDescription}</span> muestran una anomalía de intensidad {selectedOutbreak.intensity}%. Se recomienda activar protocolos regionales de contención fase 2.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <Button 
+                      variant="outline"
+                      className="flex-1 border-white/10 hover:bg-white/5 text-white/60 font-black uppercase tracking-widest h-14 rounded-2xl text-[10px]"
+                      onClick={() => setSelectedOutbreak(null)}
+                    >
+                      Cerrar
+                    </Button>
+                    <Button 
+                      className="flex-[2] bg-[#22c55e] hover:bg-[#22c55e]/90 text-[#0a0a0c] font-black uppercase tracking-widest h-14 rounded-2xl text-[10px] shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      onClick={() => setSelectedOutbreak(null)}
+                    >
+                      Activar Protocolo
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Overlay de Carga */}
         {isPending && (
@@ -475,5 +544,17 @@ function NavItem({ icon, label, active = false, onClick }: { icon: React.ReactNo
       <span className="text-[11px] font-black tracking-widest uppercase">{label}</span>
       {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#22c55e] shadow-[0_0_12px_#22c55e]" />}
     </button>
+  );
+}
+
+function InfoItem({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 text-white/30">
+        {icon}
+        <span className="text-[9px] font-black uppercase tracking-[0.2em]">{label}</span>
+      </div>
+      <p className="text-sm font-bold tracking-tight text-white/90">{value}</p>
+    </div>
   );
 }

@@ -15,7 +15,12 @@ interface Outbreak {
   intensity: number;
 }
 
-export function RecentAlerts({ outbreaks }: { outbreaks: Outbreak[] }) {
+interface RecentAlertsProps {
+  outbreaks: Outbreak[];
+  onSelect: (outbreak: Outbreak) => void;
+}
+
+export function RecentAlerts({ outbreaks, onSelect }: RecentAlertsProps) {
   return (
     <div className="w-full h-full flex flex-col p-6 gap-6 overflow-hidden">
       <div className="flex flex-col gap-4">
@@ -38,7 +43,7 @@ export function RecentAlerts({ outbreaks }: { outbreaks: Outbreak[] }) {
       <ScrollArea className="flex-1 w-full">
         <div className="flex flex-col space-y-4 pr-4">
           {outbreaks.map((outbreak, i) => (
-            <AlertCard key={i} outbreak={outbreak} />
+            <AlertCard key={i} outbreak={outbreak} onClick={() => onSelect(outbreak)} />
           ))}
           {outbreaks.length === 0 && (
             <div className="flex items-center justify-center p-8 text-white/20 border border-dashed border-white/10 rounded-2xl text-center">
@@ -51,16 +56,19 @@ export function RecentAlerts({ outbreaks }: { outbreaks: Outbreak[] }) {
   );
 }
 
-function AlertCard({ outbreak }: { outbreak: Outbreak }) {
+function AlertCard({ outbreak, onClick }: { outbreak: Outbreak; onClick: () => void }) {
   const isHigh = outbreak.priority === 'High';
 
   return (
-    <div className={cn(
-      "w-full p-5 rounded-2xl border transition-all duration-300 group cursor-pointer",
-      isHigh 
-        ? "bg-red-500/5 border-red-500/10 hover:border-red-500/30 shadow-[0_4px_20px_rgba(239,68,68,0.05)]" 
-        : "bg-white/[0.03] rounded-2xl border-white/5 hover:border-white/20"
-    )}>
+    <div 
+      onClick={onClick}
+      className={cn(
+        "w-full p-5 rounded-2xl border transition-all duration-300 group cursor-pointer active:scale-95",
+        isHigh 
+          ? "bg-red-500/5 border-red-500/10 hover:border-red-500/30 shadow-[0_4px_20px_rgba(239,68,68,0.05)]" 
+          : "bg-white/[0.03] border-white/5 hover:border-white/20"
+      )}
+    >
       <div className="flex justify-between items-start mb-4">
         <div className="space-y-1">
           <h4 className="text-sm font-bold text-white group-hover:text-[#22c55e] transition-colors truncate">
