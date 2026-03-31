@@ -80,7 +80,7 @@
   }
 }
 
-/* Marker Glows - Intensified */
+/* Marker Glows - Intensified Neon Effect */
 .marker-glow-high {
   filter: drop-shadow(0 0 25px rgba(239, 68, 68, 1)) drop-shadow(0 0 10px rgba(239, 68, 68, 0.8));
 }
