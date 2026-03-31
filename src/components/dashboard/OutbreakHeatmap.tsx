@@ -29,25 +29,26 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
         <CircleMarker
           key={`${cluster.latitude}-${cluster.longitude}-${idx}`}
           center={[cluster.latitude, cluster.longitude]}
-          radius={10 + (cluster.intensity / 10)}
+          radius={12}
           eventHandlers={{
             click: () => setSelectedCluster(cluster),
           }}
           pathOptions={{
             fillColor: cluster.priority === 'High' ? '#ef4444' : cluster.priority === 'Medium' ? '#f97316' : '#facc15',
             fillOpacity: 1,
-            color: 'white',
+            color: '#ffffff',
             weight: 2,
             className: cn(
-              "heatmap-pulse cursor-pointer",
+              "cursor-pointer no-transition",
               cluster.priority === 'High' ? "marker-glow-high" : cluster.priority === 'Medium' ? "marker-glow-medium" : "marker-glow-low"
             )
           }}
         >
           <Popup closeButton={false} offset={[0, -10]}>
-            <div className="text-center">
+            <div className="text-center p-1">
               <p className="font-black text-[9px] uppercase tracking-widest text-[#54BBDA] mb-0.5">{cluster.locationDescription}</p>
               <p className="font-bold text-xs text-white">{cluster.diseaseName}</p>
+              <p className="text-[10px] text-white/40 mt-1 uppercase font-bold">{cluster.status}</p>
             </div>
           </Popup>
         </CircleMarker>
@@ -100,13 +101,13 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
                     className="flex-1 border-white/10 hover:bg-white/5 text-white/60 font-black uppercase tracking-widest h-14 rounded-2xl text-[10px]"
                     onClick={() => setSelectedCluster(null)}
                   >
-                    Ignorar
+                    Cerrar
                   </Button>
                   <Button 
                     className="flex-[2] bg-[#54BBDA] hover:bg-[#54BBDA]/90 text-[#0a0a0c] font-black uppercase tracking-widest h-14 rounded-2xl text-[10px] shadow-[0_0_20px_rgba(84,187,218,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
                     onClick={() => setSelectedCluster(null)}
                   >
-                    Desplegar Protocolo
+                    Activar Protocolo
                   </Button>
                 </div>
               </div>
