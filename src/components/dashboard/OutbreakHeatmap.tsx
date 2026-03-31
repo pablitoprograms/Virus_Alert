@@ -1,15 +1,15 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { IdentifyOutbreaksOutput } from '@/ai/flows/identify-outbreaks-flow';
+import { AdvancedMarker, useMap } from '@vis.gl/react-google-maps';
 import { cn } from "@/lib/utils";
 import { 
   Dialog, 
   DialogContent, 
   DialogHeader, 
-  DialogTitle, 
-  DialogDescription 
+  DialogTitle 
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,66 +21,19 @@ interface OutbreakHeatmapProps {
 
 export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
   const [selectedCluster, setSelectedCluster] = useState<any | null>(null);
+  const map = useMap();
 
   if (!data || !data.outbreakClusters) return null;
 
-  // Coordenadas para el viewBox del SVG de 1000x500 (Proyección Equirectangular)
-  const mapCoords = (lat: number, lng: number) => {
-    const x = (lng + 180) * (1000 / 360);
-    const y = (90 - lat) * (500 / 180);
-    return { x, y };
-  };
-
   return (
     <>
-      <g>
-        {data.outbreakClusters.map((cluster, idx) => {
-          const { x, y } = mapCoords(cluster.latitude, cluster.longitude);
-          const intensityScale = cluster.intensity / 100;
-          const radius = 6 + (intensityScale * 12);
-          
-          const isHigh = cluster.priority === 'High';
-          const isMedium = cluster.priority === 'Medium';
-
-          return (
-            <g 
-              key={idx} 
-              className="cursor-pointer group"
-              onClick={() => setSelectedCluster(cluster)}
-            >
-              {/* Pulsating Glow */}
-              <circle
-                cx={x}
-                cy={y}
-                r={radius * 2}
-                className={cn(
-                  "animate-pulse opacity-30 blur-[8px]",
-                  isHigh ? "fill-red-600" : isMedium ? "fill-orange-500" : "fill-yellow-400"
-                )}
-              />
-              
-              {/* Core Point */}
-              <circle
-                cx={x}
-                cy={y}
-                r={radius / 2}
-                className={cn(
-                  "stroke-white/80 stroke-1 shadow-2xl transition-all duration-300 group-hover:scale-125",
-                  isHigh ? "fill-red-600" : isMedium ? "fill-orange-500" : "fill-yellow-400"
-                )}
-              />
-
-              {/* Invisible touch target */}
-              <circle
-                cx={x}
-                cy={y}
-                r={20}
-                className="fill-transparent"
-              />
-            </g>
-          );
-        })}
-      </g>
+      {data.outbreakClusters.map((cluster, idx) => (
+        <OutbreakMarker 
+          key={idx} 
+          cluster={cluster} 
+          onClick={() => setSelectedCluster(cluster)} 
+        />
+      ))}
 
       <Dialog open={!!selectedCluster} onOpenChange={() => setSelectedCluster(null)}>
         <DialogContent className="bg-[#0f1012] border-white/10 text-white max-w-md rounded-3xl overflow-hidden p-0 shadow-2xl">
@@ -128,6 +81,38 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function OutbreakMarker({ cluster, onClick }: { cluster: any, onClick: () => void }) {
+  const intensityScale = cluster.intensity / 100;
+  const size = 20 + (intensityScale * 40);
+  const isHigh = cluster.priority === 'High';
+  const isMedium = cluster.priority === 'Medium';
+
+  return (
+    <AdvancedMarker
+      position={{ lat: cluster.latitude, lng: cluster.longitude }}
+      onClick={onClick}
+    >
+      <div className="relative flex items-center justify-center cursor-pointer group" style={{ width: size, height: size }}>
+        {/* Pulsating Glow */}
+        <div 
+          className={cn(
+            "absolute inset-0 rounded-full animate-pulse opacity-40 blur-md transition-all duration-300 group-hover:opacity-70",
+            isHigh ? "bg-red-600" : isMedium ? "bg-orange-500" : "bg-yellow-400"
+          )}
+        />
+        
+        {/* Core Point */}
+        <div 
+          className={cn(
+            "relative w-3 h-3 rounded-full border border-white/80 shadow-2xl transition-all duration-300 group-hover:scale-150",
+            isHigh ? "bg-red-600" : isMedium ? "bg-orange-500" : "bg-yellow-400"
+          )}
+        />
+      </div>
+    </AdvancedMarker>
   );
 }
 
