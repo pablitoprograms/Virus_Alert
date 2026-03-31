@@ -321,16 +321,6 @@ export default function GlobalPulseDashboard() {
       {/* Contenido Principal */}
       <main className="flex-1 relative flex flex-row min-w-0">
         
-        {/* Columna de Alertas Recientes (Solo visible en Dashboard) */}
-        <div 
-          className={cn(
-            "h-full transition-all duration-500 ease-in-out border-r border-white/5 bg-[#0c0d0f]/50 z-30",
-            currentView === 'dashboard' ? "w-80 opacity-100" : "w-0 opacity-0 overflow-hidden"
-          )}
-        >
-          <RecentAlerts outbreaks={outbreakData.outbreakClusters} onSelect={(alert) => setSelectedOutbreak(alert)} />
-        </div>
-
         {/* Área del Contenido Variable */}
         <div className="flex-1 relative overflow-hidden bg-[#060608]">
           <header className="absolute top-0 left-0 w-full z-20 px-8 py-8 flex justify-between items-start pointer-events-none">
@@ -344,7 +334,13 @@ export default function GlobalPulseDashboard() {
           </header>
 
           <div className="w-full h-full relative">
-            {currentView === 'reports' ? (
+            {currentView === 'dashboard' ? (
+              <div className="absolute inset-0 bg-[#060608] p-8 pt-36 overflow-hidden z-10 flex justify-center items-start">
+                <div className="w-full max-w-4xl h-[calc(100vh-250px)] bg-[#0c0d0f]/50 border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
+                  <RecentAlerts outbreaks={outbreakData.outbreakClusters} onSelect={(alert) => setSelectedOutbreak(alert)} />
+                </div>
+              </div>
+            ) : currentView === 'reports' ? (
               <div className="absolute inset-0 bg-[#060608] p-8 pt-36 overflow-auto z-10 flex justify-center items-start">
                 <div className="w-full max-w-3xl bg-[#0c0d0f] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
                   <div className="p-10 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
