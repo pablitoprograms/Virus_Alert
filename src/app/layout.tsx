@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
 
 export const metadata: Metadata = {
-  title: 'GlobalPulse | Global Disease Outbreak Tracker',
+  title: 'VirusAlert | Global Disease Outbreak Tracker',
   description: 'Interactive real-time disease outbreak tracking dashboard.',
 };
 

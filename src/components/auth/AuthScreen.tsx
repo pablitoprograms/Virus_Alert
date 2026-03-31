@@ -24,7 +24,7 @@ export function AuthScreen() {
       .catch((error: any) => {
         setIsLoading(false);
         let message = "No se pudo iniciar sesión. Verifica tus credenciales.";
-        if (error.code === 'auth/invalid-credential') {
+        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
           message = "Email o contraseña incorrectos. Por favor, inténtalo de nuevo.";
         }
         toast({
@@ -60,7 +60,7 @@ export function AuthScreen() {
             <Globe className="text-[#0a0a0c]" size={32} />
           </div>
           <div className="text-center space-y-2">
-            <CardTitle className="text-3xl font-black tracking-tighter uppercase">Acceso GlobalPulse</CardTitle>
+            <CardTitle className="text-3xl font-black tracking-tighter uppercase">Acceso VirusAlert</CardTitle>
             <CardDescription className="text-white/40 font-bold uppercase tracking-widest text-[10px]">Terminal de Vigilancia Epidemiológica</CardDescription>
           </div>
         </CardHeader>
@@ -73,7 +73,7 @@ export function AuthScreen() {
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
                 <Input 
                   type="email" 
-                  placeholder="operador@biosurv.es" 
+                  placeholder="operador@virusalert.es" 
                   className="h-14 bg-white/[0.03] border-white/10 rounded-2xl pl-12 text-sm focus:ring-[#54BBDA]"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}

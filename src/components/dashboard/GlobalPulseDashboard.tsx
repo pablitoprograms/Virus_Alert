@@ -138,7 +138,7 @@ export default function GlobalPulseDashboard() {
       await signOut(auth);
       toast({
         title: "Sesión Cerrada",
-        description: "Has salido de la terminal GlobalPulse correctamente.",
+        description: "Has salido de la terminal VirusAlert correctamente.",
       });
     } catch (error) {
       toast({
@@ -153,7 +153,7 @@ export default function GlobalPulseDashboard() {
     e.preventDefault();
     toast({
       title: "Informe Enviado",
-      description: "El reporte médico ha sido registrado y está siendo analizado por Biosurv IA.",
+      description: "El reporte médico ha sido registrado y está siendo analizado por VirusAlert IA.",
     });
   };
 
@@ -188,7 +188,7 @@ export default function GlobalPulseDashboard() {
             <Globe className="text-[#0a0a0c]" size={22} />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">GlobalPulse</h1>
+            <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">VirusAlert</h1>
             <p className="text-[9px] font-bold text-[#54BBDA] uppercase tracking-widest">Nodos España Activos</p>
           </div>
         </div>
@@ -340,7 +340,7 @@ export default function GlobalPulseDashboard() {
                   <div className="p-6 bg-[#54BBDA]/5 rounded-3xl border border-[#54BBDA]/10 flex gap-4 items-start">
                     <AlertCircle className="text-[#54BBDA] shrink-0" size={20} />
                     <p className="text-xs text-[#54BBDA]/70 font-medium leading-relaxed">
-                      Este informe será analizado instantáneamente por el motor Biosurv IA para actualizar los mapas de calor y alertar a los centros de salud regionales de forma automática.
+                      Este informe será analizado instantáneamente por el motor VirusAlert IA para actualizar los mapas de calor y alertar a los centros de salud regionales de forma automática.
                     </p>
                   </div>
 
