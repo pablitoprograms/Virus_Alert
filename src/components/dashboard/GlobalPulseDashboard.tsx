@@ -234,7 +234,7 @@ export default function GlobalPulseDashboard() {
         </Button>
       )}
 
-      {/* Barra Lateral */}
+      {/* Barra Lateral Principal */}
       <aside 
         className={cn(
           "relative z-40 flex flex-col bg-[#0c0d0f] border-r border-white/5 transition-all duration-500 ease-in-out shadow-2xl",
@@ -325,109 +325,113 @@ export default function GlobalPulseDashboard() {
       </aside>
 
       {/* Contenido Principal */}
-      <main className="flex-1 relative flex flex-col min-w-0">
-        <header className="absolute top-0 left-0 w-full z-20 px-8 py-8 flex justify-between items-start pointer-events-none">
-          <div className="pointer-events-auto">
-            <h2 className="text-xs font-black text-white/30 uppercase tracking-[0.4em] mb-1">Vigilancia Nacional</h2>
-            <p className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">
-              {currentView === 'dashboard' ? 'Monitor de Brotes Pandémicos' : 
-               currentView === 'map' ? 'Mapa Táctico España' : 'Central de Informes'}
-            </p>
-          </div>
-          
-          {!isPanelsHidden && (
-            <div className="flex gap-4 pointer-events-auto">
-               <div className="px-5 py-2.5 bg-[#1a1b1f]/80 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center gap-3 shadow-2xl">
-                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_12px_#ef4444]" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white/80">Alerta Nivel 4: España</span>
-               </div>
-            </div>
-          )}
-        </header>
-
-        <div className="flex-1 relative overflow-hidden bg-[#060608]">
-          {currentView === 'reports' ? (
-            <div className="absolute inset-0 bg-[#060608] p-8 pt-36 overflow-auto">
-              <div className="max-w-3xl mx-auto bg-[#0c0d0f] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
-                <div className="p-10 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
-                  <h3 className="text-2xl font-bold flex items-center gap-4">
-                    <FileText className="text-[#22c55e]" size={28} />
-                    Reporte de Incidencia Médica
-                  </h3>
-                </div>
-                <form onSubmit={handleReportSubmit} className="p-10 space-y-8">
-                  <div className="space-y-4">
-                    <Label className="text-xs font-black uppercase tracking-widest text-white/40">Descripción del Problema Médico</Label>
-                    <Textarea 
-                      placeholder="Describa los síntomas observados, duración y gravedad..." 
-                      className="min-h-[150px] bg-white/[0.03] border-white/10 rounded-2xl focus:ring-[#22c55e] text-base p-6"
-                      required
-                      value={reportDescription}
-                      onChange={(e) => setReportDescription(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <Label className="text-xs font-black uppercase tracking-widest text-white/40">Tipo de Enfermedad</Label>
-                      <Select required value={selectedDisease} onValueChange={setSelectedDisease}>
-                        <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl">
-                          <SelectValue placeholder="Seleccionar tipo..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#1e2025] border-white/10 text-white">
-                          {TIPOS_ENFERMEDAD.map(tipo => (
-                            <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-4">
-                      <Label className="text-xs font-black uppercase tracking-widest text-white/40">Ubicación (Provincias España)</Label>
-                      <Select required value={selectedProvince} onValueChange={setSelectedProvince}>
-                        <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl">
-                          <SelectValue placeholder="Seleccionar provincia..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#1e2025] border-white/10 text-white">
-                          {Object.keys(PROVINCIA_COORDINATES).sort().map(prov => (
-                            <SelectItem key={prov} value={prov}>{prov}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="p-6 bg-[#22c55e]/5 rounded-3xl border border-[#22c55e]/10 flex gap-4 items-start">
-                    <AlertCircle className="text-[#22c55e] shrink-0" size={20} />
-                    <p className="text-xs text-[#22c55e]/70 font-medium leading-relaxed">
-                      Este informe será analizado instantáneamente por el motor VirusAlert IA para actualizar los mapas de calor y alertar a los centros de salud regionales de forma automática.
-                    </p>
-                  </div>
-
-                  <Button 
-                    type="submit"
-                    className="w-full h-16 bg-[#22c55e] hover:bg-[#22c55e]/90 text-[#0a0a0c] font-black uppercase tracking-[0.2em] rounded-2xl text-xs shadow-[0_0_20px_rgba(34,197,94,0.3)]"
-                  >
-                    <Send size={18} className="mr-2" /> Enviar Reporte Táctico
-                  </Button>
-                </form>
-              </div>
-            </div>
-          ) : (
-            <WorldMap>
-              <OutbreakHeatmap data={outbreakData} />
-            </WorldMap>
-          )}
-        </div>
-
-        {/* Panel de Alertas Recientes */}
+      <main className="flex-1 relative flex flex-row min-w-0">
+        
+        {/* Columna de Alertas Recientes (Ahora a la izquierda) */}
         <div 
           className={cn(
-            "transition-all duration-1000 ease-in-out",
-            isPanelsHidden ? "h-0 opacity-0 overflow-hidden" : "h-72 opacity-100"
+            "h-full transition-all duration-500 ease-in-out border-r border-white/5 bg-[#0c0d0f]/50 z-30",
+            isPanelsHidden ? "w-0 opacity-0 overflow-hidden" : "w-80 opacity-100"
           )}
         >
           <RecentAlerts outbreaks={outbreakData.outbreakClusters} />
+        </div>
+
+        {/* Área del Mapa y Cabecera */}
+        <div className="flex-1 relative overflow-hidden bg-[#060608]">
+          <header className="absolute top-0 left-0 w-full z-20 px-8 py-8 flex justify-between items-start pointer-events-none">
+            <div className="pointer-events-auto">
+              <h2 className="text-xs font-black text-white/30 uppercase tracking-[0.4em] mb-1">Vigilancia Nacional</h2>
+              <p className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">
+                {currentView === 'dashboard' ? 'Monitor de Brotes Pandémicos' : 
+                 currentView === 'map' ? 'Mapa Táctico España' : 'Central de Informes'}
+              </p>
+            </div>
+            
+            {!isPanelsHidden && (
+              <div className="flex gap-4 pointer-events-auto">
+                 <div className="px-5 py-2.5 bg-[#1a1b1f]/80 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center gap-3 shadow-2xl">
+                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_12px_#ef4444]" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white/80">Alerta Nivel 4: España</span>
+                 </div>
+              </div>
+            )}
+          </header>
+
+          <div className="w-full h-full relative">
+            {currentView === 'reports' ? (
+              <div className="absolute inset-0 bg-[#060608] p-8 pt-36 overflow-auto z-10">
+                <div className="max-w-3xl mx-auto bg-[#0c0d0f] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
+                  <div className="p-10 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+                    <h3 className="text-2xl font-bold flex items-center gap-4">
+                      <FileText className="text-[#22c55e]" size={28} />
+                      Reporte de Incidencia Médica
+                    </h3>
+                  </div>
+                  <form onSubmit={handleReportSubmit} className="p-10 space-y-8">
+                    <div className="space-y-4">
+                      <Label className="text-xs font-black uppercase tracking-widest text-white/40">Descripción del Problema Médico</Label>
+                      <Textarea 
+                        placeholder="Describa los síntomas observados, duración y gravedad..." 
+                        className="min-h-[150px] bg-white/[0.03] border-white/10 rounded-2xl focus:ring-[#22c55e] text-base p-6"
+                        required
+                        value={reportDescription}
+                        onChange={(e) => setReportDescription(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                        <Label className="text-xs font-black uppercase tracking-widest text-white/40">Tipo de Enfermedad</Label>
+                        <Select required value={selectedDisease} onValueChange={setSelectedDisease}>
+                          <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl">
+                            <SelectValue placeholder="Seleccionar tipo..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1e2025] border-white/10 text-white">
+                            {TIPOS_ENFERMEDAD.map(tipo => (
+                              <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-4">
+                        <Label className="text-xs font-black uppercase tracking-widest text-white/40">Ubicación (Provincias España)</Label>
+                        <Select required value={selectedProvince} onValueChange={setSelectedProvince}>
+                          <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl">
+                            <SelectValue placeholder="Seleccionar provincia..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1e2025] border-white/10 text-white">
+                            {Object.keys(PROVINCIA_COORDINATES).sort().map(prov => (
+                              <SelectItem key={prov} value={prov}>{prov}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="p-6 bg-[#22c55e]/5 rounded-3xl border border-[#22c55e]/10 flex gap-4 items-start">
+                      <AlertCircle className="text-[#22c55e] shrink-0" size={20} />
+                      <p className="text-xs text-[#22c55e]/70 font-medium leading-relaxed">
+                        Este informe será analizado instantáneamente por el motor VirusAlert IA para actualizar los mapas de calor y alertar a los centros de salud regionales de forma automática.
+                      </p>
+                    </div>
+
+                    <Button 
+                      type="submit"
+                      className="w-full h-16 bg-[#22c55e] hover:bg-[#22c55e]/90 text-[#0a0a0c] font-black uppercase tracking-[0.2em] rounded-2xl text-xs shadow-[0_0_20px_rgba(34,197,94,0.3)]"
+                    >
+                      <Send size={18} className="mr-2" /> Enviar Reporte Táctico
+                    </Button>
+                  </form>
+                </div>
+              </div>
+            ) : (
+              <WorldMap>
+                <OutbreakHeatmap data={outbreakData} />
+              </WorldMap>
+            )}
+          </div>
         </div>
 
         {/* Overlay de Carga */}
