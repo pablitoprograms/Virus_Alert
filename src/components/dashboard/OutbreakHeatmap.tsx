@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { IdentifyOutbreaksOutput } from '@/ai/flows/identify-outbreaks-flow';
-import { AdvancedMarker, useMap } from '@vis.gl/react-google-maps';
+import { CircleMarker } from 'react-leaflet';
 import { cn } from "@/lib/utils";
 import { 
   Dialog, 
@@ -27,10 +27,23 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
   return (
     <>
       {data.outbreakClusters.map((cluster, idx) => (
-        <OutbreakMarker 
-          key={idx} 
-          cluster={cluster} 
-          onClick={() => setSelectedCluster(cluster)} 
+        <CircleMarker
+          key={idx}
+          center={[cluster.latitude, cluster.longitude]}
+          radius={8 + (cluster.intensity / 10)}
+          eventHandlers={{
+            click: () => setSelectedCluster(cluster),
+          }}
+          pathOptions={{
+            fillColor: cluster.priority === 'High' ? '#ef4444' : cluster.priority === 'Medium' ? '#f97316' : '#facc15',
+            fillOpacity: 0.8,
+            color: 'white',
+            weight: 2,
+            className: cn(
+              "heatmap-pulse cursor-pointer",
+              cluster.priority === 'High' ? "marker-glow-high" : cluster.priority === 'Medium' ? "marker-glow-medium" : "marker-glow-low"
+            )
+          }}
         />
       ))}
 
@@ -97,49 +110,6 @@ export function OutbreakHeatmap({ data }: OutbreakHeatmapProps) {
         </DialogContent>
       </Dialog>
     </>
-  );
-}
-
-function OutbreakMarker({ cluster, onClick }: { cluster: any, onClick: () => void }) {
-  const intensityScale = cluster.intensity / 100;
-  const size = 24 + (intensityScale * 48);
-  const isHigh = cluster.priority === 'High';
-  const isMedium = cluster.priority === 'Medium';
-
-  return (
-    <AdvancedMarker
-      position={{ lat: cluster.latitude, lng: cluster.longitude }}
-      onClick={onClick}
-    >
-      <div className="relative flex items-center justify-center cursor-pointer group" style={{ width: size, height: size }}>
-        {/* Pulsating Glow */}
-        <div 
-          className={cn(
-            "absolute inset-0 rounded-full animate-pulse opacity-40 blur-xl transition-all duration-500 group-hover:opacity-80 group-hover:scale-125",
-            isHigh ? "bg-red-600" : isMedium ? "bg-orange-500" : "bg-yellow-400"
-          )}
-        />
-        
-        {/* Ring */}
-        <div className={cn(
-          "absolute inset-0 rounded-full border-2 opacity-20 animate-ping duration-[3s]",
-          isHigh ? "border-red-600" : isMedium ? "border-orange-500" : "border-yellow-400"
-        )} />
-
-        {/* Core Point */}
-        <div 
-          className={cn(
-            "relative w-3.5 h-3.5 rounded-full border-2 border-white shadow-[0_0_15px_rgba(255,255,255,0.5)] transition-all duration-500 group-hover:scale-[1.8] group-hover:border-4",
-            isHigh ? "bg-red-600" : isMedium ? "bg-orange-500" : "bg-yellow-400"
-          )}
-        />
-        
-        {/* Label on Hover */}
-        <div className="absolute top-full mt-3 bg-black/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap shadow-2xl scale-75 group-hover:scale-100">
-           <span className="text-[10px] font-black uppercase tracking-widest text-white/90">{cluster.diseaseName}</span>
-        </div>
-      </div>
-    </AdvancedMarker>
   );
 }
 

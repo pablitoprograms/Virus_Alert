@@ -1,6 +1,9 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@import "leaflet/dist/leaflet.css";
 
 @layer base {
   :root {
@@ -42,10 +45,27 @@
   }
 }
 
-.map-container {
-  mask-image: radial-gradient(circle at center, black 60%, transparent 100%);
+/* Leaflet Overrides */
+.leaflet-container {
+  background: #060608 !important;
+  width: 100%;
+  height: 100%;
 }
 
+.leaflet-control-zoom {
+  border: none !important;
+  margin: 24px !important;
+}
+
+.leaflet-control-zoom-in, .leaflet-control-zoom-out {
+  background-color: #1e2025 !important;
+  color: #54BBDA !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  margin-bottom: 4px !important;
+}
+
+/* Animations and Heatmap */
 .heatmap-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -72,7 +92,15 @@
   @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
 }
 
-/* Heatmap Gradients */
-.heatmap-low { fill: #FFCC00; filter: drop-shadow(0 0 4px #FFCC00); }
-.heatmap-medium { fill: #FF6600; filter: drop-shadow(0 0 8px #FF6600); }
-.heatmap-high { fill: #E60000; filter: drop-shadow(0 0 12px #E60000); }
+/* Marker Glows */
+.marker-glow-high {
+  filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.8));
+}
+
+.marker-glow-medium {
+  filter: drop-shadow(0 0 15px rgba(249, 115, 22, 0.8));
+}
+
+.marker-glow-low {
+  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.8));
+}

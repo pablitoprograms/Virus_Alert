@@ -2,65 +2,31 @@
 "use client";
 
 import React from 'react';
-import { Map } from '@vis.gl/react-google-maps';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import { cn } from "@/lib/utils";
+import 'leaflet/dist/leaflet.css';
 
 interface WorldMapProps {
   children?: React.ReactNode;
 }
 
-const DARK_MAP_STYLE = [
-  { "elementType": "geometry", "stylers": [{ "color": "#141518" }] },
-  { "elementType": "labels.text.stroke", "stylers": [{ "color": "#141518" }] },
-  { "elementType": "labels.text.fill", "stylers": [{ "color": "#746855" }] },
-  {
-    "featureType": "administrative.locality",
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#d59563" }]
-  },
-  {
-    "featureType": "poi",
-    "elementType": "labels.text.fill",
-    "stylers": [{ "color": "#d59563" }]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#2b2d33" }]
-  },
-  {
-    "featureType": "road",
-    "elementType": "geometry.stroke",
-    "stylers": [{ "color": "#212a37" }]
-  },
-  {
-    "featureType": "road.highway",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#3c3e44" }]
-  },
-  {
-    "featureType": "water",
-    "elementType": "geometry",
-    "stylers": [{ "color": "#0a0a0c" }]
-  }
-];
-
 export function WorldMap({ children }: WorldMapProps) {
   return (
     <div className="relative w-full h-full bg-[#0a0a0c] overflow-hidden select-none">
-      <Map
-        style={{ width: '100%', height: '100%' }}
-        defaultCenter={{ lat: 20, lng: 0 }}
-        defaultZoom={3}
-        gestureHandling={'greedy'}
-        disableDefaultUI={true}
-        options={{
-          styles: DARK_MAP_STYLE,
-          backgroundColor: '#0a0a0c'
-        }}
+      <MapContainer 
+        center={[20, 0]} 
+        zoom={3} 
+        scrollWheelZoom={true}
+        className="w-full h-full z-10"
+        zoomControl={true}
+        attributionControl={false}
       >
+        <TileLayer
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          attribution='&copy; <a href="https://www.esri.com/">Esri</a>, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EBP, and the GIS User Community'
+        />
         {children}
-      </Map>
+      </MapContainer>
 
       {/* Leyenda de Severidad */}
       <div className="absolute left-8 bottom-8 flex flex-col gap-4 p-6 bg-[#0f1012]/90 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl min-w-[220px] hidden sm:flex z-30 pointer-events-none">
@@ -71,6 +37,9 @@ export function WorldMap({ children }: WorldMapProps) {
           <LegendItem color="bg-yellow-400" label="Vigilancia Activa" />
         </div>
       </div>
+      
+      {/* Capa de atmósfera oscura */}
+      <div className="absolute inset-0 pointer-events-none z-20 bg-gradient-to-t from-[#060608]/50 via-transparent to-[#060608]/50" />
     </div>
   );
 }
