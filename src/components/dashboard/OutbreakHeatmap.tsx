@@ -2,13 +2,21 @@
 "use client";
 
 import React from 'react';
-import { IdentifyOutbreaksOutput } from '@/ai/flows/identify-outbreaks-flow';
 import { CircleMarker, Popup } from 'react-leaflet';
 import { cn } from "@/lib/utils";
 
+interface Outbreak {
+  diseaseName: string;
+  locationDescription: string;
+  latitude: number;
+  longitude: number;
+  priority: 'High' | 'Medium' | 'Low';
+  status: string;
+}
+
 interface OutbreakHeatmapProps {
-  data: IdentifyOutbreaksOutput | null;
-  onSelectCluster: (cluster: any) => void;
+  data: { outbreakClusters: Outbreak[] } | null;
+  onSelectCluster: (cluster: Outbreak) => void;
 }
 
 export function OutbreakHeatmap({ data, onSelectCluster }: OutbreakHeatmapProps) {

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useTransition } from 'react';
+import React, { useState, useTransition, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { 
   LayoutDashboard, 
@@ -17,7 +17,9 @@ import {
   MapPin,
   Calendar,
   Info,
-  ShieldAlert
+  ShieldAlert,
+  Loader2,
+  Navigation
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,8 +29,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useAuth } from "@/firebase";
+import { useUser, useAuth, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { signOut } from "firebase/auth";
+import { collection, query, orderBy, limit } from "firebase/firestore";
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 // Importación dinámica para evitar errores de SSR con Leaflet
 const WorldMap = dynamic(() => import('./WorldMap').then((mod) => mod.WorldMap), {
@@ -45,6 +49,7 @@ const RecentAlerts = dynamic(() => import('./RecentAlerts').then((mod) => mod.Re
 });
 
 type DashboardView = 'dashboard' | 'map' | 'reports';
+type PriorityLevel = 'High' | 'Medium' | 'Low';
 
 const PROVINCIA_COORDINATES: Record<string, [number, number]> = {
   "Madrid": [40.4168, -3.7038],
@@ -85,57 +90,11 @@ const TIPOS_ENFERMEDAD = [
   "Fiebre del Nilo Occidental"
 ].sort();
 
-const MOCK_SPAIN_DATA = {
-  outbreakClusters: [
-    {
-      diseaseName: "COVID-1.0",
-      locationDescription: "Madrid, España",
-      latitude: 40.4168,
-      longitude: -3.7038,
-      category: "Viral",
-      priority: "High",
-      intensity: 85,
-      status: "Active",
-      reportedDate: new Date().toISOString()
-    },
-    {
-      diseaseName: "Gripe A (H1N1)",
-      locationDescription: "Barcelona, España",
-      latitude: 41.3851,
-      longitude: 2.1734,
-      category: "Viral",
-      priority: "Medium",
-      intensity: 60,
-      status: "Monitoring",
-      reportedDate: new Date().toISOString()
-    },
-    {
-      diseaseName: "Bronquitis Aguda",
-      locationDescription: "Valencia, España",
-      latitude: 39.4699,
-      longitude: -0.3763,
-      category: "Other",
-      priority: "Low",
-      intensity: 40,
-      status: "Contained",
-      reportedDate: new Date().toISOString()
-    },
-    {
-      diseaseName: "Neumonía Atípica",
-      locationDescription: "Sevilla, España",
-      latitude: 37.3891,
-      longitude: -5.9845,
-      category: "Bacterial",
-      priority: "High",
-      intensity: 75,
-      status: "New",
-      reportedDate: new Date().toISOString()
-    }
-  ]
-};
+const SYMPTOMS_LIST = [
+  "Fiebre", "Tos Seca", "Erupciones", "Dificultad Respiratoria", "Dolor Articular", "Fatiga Extrema"
+];
 
 export default function GlobalPulseDashboard() {
-  const [outbreakData, setOutbreakData] = useState(MOCK_SPAIN_DATA);
   const [isPanelsHidden, setIsPanelsHidden] = useState(false);
   const [currentView, setCurrentView] = useState<DashboardView>('dashboard');
   const [selectedOutbreak, setSelectedOutbreak] = useState<any | null>(null);
@@ -143,14 +102,24 @@ export default function GlobalPulseDashboard() {
   const { toast } = useToast();
   const { user } = useUser();
   const auth = useAuth();
+  const db = useFirestore();
+
+  // Firestore Data
+  const outbreaksQuery = useMemoFirebase(() => {
+    return query(collection(db, 'outbreaks'), orderBy('reportedDate', 'desc'), limit(50));
+  }, [db]);
+  const { data: outbreaks } = useCollection(outbreaksQuery);
 
   // Form states
   const [reportDescription, setReportDescription] = useState("");
   const [selectedDisease, setSelectedDisease] = useState("");
   const [selectedProvince, setSelectedProvince] = useState("");
+  const [selectedPriority, setSelectedPriority] = useState<PriorityLevel>('Low');
+  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
+  const [isLocating, setIsLocating] = useState(false);
 
-  const activeClustersCount = outbreakData.outbreakClusters.length;
-  const highPriorityCount = outbreakData.outbreakClusters.filter(c => c.priority === 'High').length;
+  const activeClustersCount = outbreaks?.length || 0;
+  const highPriorityCount = outbreaks?.filter(c => c.priority === 'High').length || 0;
 
   const handleLogout = async () => {
     try {
@@ -168,15 +137,47 @@ export default function GlobalPulseDashboard() {
     }
   };
 
+  const toggleSymptom = (symptom: string) => {
+    setSelectedSymptoms(prev => 
+      prev.includes(symptom) ? prev.filter(s => s !== symptom) : [...prev, symptom]
+    );
+  };
+
+  const handleAutodetectLocation = () => {
+    if (!navigator.geolocation) {
+      toast({ variant: "destructive", title: "No disponible", description: "Tu navegador no soporta geolocalización." });
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        let closest = "";
+        let minDistance = Infinity;
+        for (const [name, [pLat, pLng]] of Object.entries(PROVINCIA_COORDINATES)) {
+          const dist = Math.sqrt(Math.pow(latitude - pLat, 2) + Math.pow(longitude - pLng, 2));
+          if (dist < minDistance) {
+            minDistance = dist;
+            closest = name;
+          }
+        }
+        setSelectedProvince(closest);
+        setIsLocating(false);
+        toast({ title: "Ubicación Detectada", description: `Te encuentras cerca de ${closest}.` });
+      },
+      () => {
+        setIsLocating(false);
+        toast({ variant: "destructive", title: "Error", description: "No se pudo acceder a tu ubicación." });
+      }
+    );
+  };
+
   const handleReportSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedProvince || !selectedDisease) {
-      toast({
-        variant: "destructive",
-        title: "Datos incompletos",
-        description: "Por favor, selecciona una provincia y un tipo de enfermedad.",
-      });
+      toast({ variant: "destructive", title: "Datos incompletos", description: "Por favor, selecciona una provincia y un tipo de enfermedad." });
       return;
     }
 
@@ -187,27 +188,29 @@ export default function GlobalPulseDashboard() {
         locationDescription: `${selectedProvince}, España`,
         latitude: coords[0],
         longitude: coords[1],
-        category: "Viral" as const,
-        priority: "High" as const,
-        intensity: Math.floor(Math.random() * 40) + 60,
-        status: "New" as const,
+        countryCode: 'ES',
+        category: "Viral",
+        priority: selectedPriority,
+        intensityLevel: selectedPriority === 'High' ? 85 : selectedPriority === 'Medium' ? 60 : 35,
+        status: "New",
+        symptoms: selectedSymptoms,
+        description: reportDescription,
         reportedDate: new Date().toISOString()
       };
 
-      setOutbreakData(prev => ({
-        ...prev,
-        outbreakClusters: [newOutbreak, ...prev.outbreakClusters]
-      }));
+      addDocumentNonBlocking(collection(db, 'outbreaks'), newOutbreak);
 
       // Limpiar formulario y volver al panel
       setReportDescription("");
       setSelectedDisease("");
       setSelectedProvince("");
+      setSelectedPriority('Low');
+      setSelectedSymptoms([]);
       setCurrentView('dashboard');
 
       toast({
-        title: "Informe Procesado",
-        description: `Se ha registrado un nuevo brote de ${selectedDisease} en ${selectedProvince}. El mapa táctico ha sido actualizado.`,
+        title: "Transmitiendo datos cifrados...",
+        description: `Protocolo ${selectedPriority} activado en ${selectedProvince}.`,
       });
     });
   };
@@ -337,11 +340,11 @@ export default function GlobalPulseDashboard() {
             {currentView === 'dashboard' ? (
               <div className="absolute inset-0 bg-[#060608] p-8 pt-36 overflow-hidden z-10 flex justify-center items-start">
                 <div className="w-full max-w-4xl h-[calc(100vh-250px)] bg-[#0c0d0f]/50 border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
-                  <RecentAlerts outbreaks={outbreakData.outbreakClusters} onSelect={(alert) => setSelectedOutbreak(alert)} />
+                  <RecentAlerts outbreaks={outbreaks || []} onSelect={(alert) => setSelectedOutbreak(alert)} />
                 </div>
               </div>
             ) : currentView === 'reports' ? (
-              <div className="absolute inset-0 bg-[#060608] p-8 pt-36 overflow-auto z-10 flex justify-center items-start">
+              <div className="absolute inset-0 bg-[#060608] p-8 pt-36 overflow-auto z-10 flex justify-center items-start pb-20">
                 <div className="w-full max-w-3xl bg-[#0c0d0f] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
                   <div className="p-10 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
                     <h3 className="text-2xl font-bold flex items-center gap-4">
@@ -350,15 +353,63 @@ export default function GlobalPulseDashboard() {
                     </h3>
                   </div>
                   <form onSubmit={handleReportSubmit} className="p-10 space-y-8">
+                    {/* Selector de Gravedad */}
+                    <div className="space-y-4">
+                      <Label className="text-xs font-black uppercase tracking-widest text-white/40">Nivel de Gravedad</Label>
+                      <div className="grid grid-cols-3 gap-4">
+                        <Button 
+                          type="button" 
+                          variant={selectedPriority === 'Low' ? 'default' : 'outline'}
+                          onClick={() => setSelectedPriority('Low')}
+                          className={cn("h-16 rounded-2xl font-bold uppercase text-[10px] tracking-widest", 
+                            selectedPriority === 'Low' ? "bg-yellow-500 hover:bg-yellow-600 text-black" : "border-yellow-500/20 text-yellow-500")}
+                        >Vigilancia</Button>
+                        <Button 
+                          type="button" 
+                          variant={selectedPriority === 'Medium' ? 'default' : 'outline'}
+                          onClick={() => setSelectedPriority('Medium')}
+                          className={cn("h-16 rounded-2xl font-bold uppercase text-[10px] tracking-widest", 
+                            selectedPriority === 'Medium' ? "bg-orange-500 hover:bg-orange-600 text-black" : "border-orange-500/20 text-orange-500")}
+                        >Alerta</Button>
+                        <Button 
+                          type="button" 
+                          variant={selectedPriority === 'High' ? 'default' : 'outline'}
+                          onClick={() => setSelectedPriority('High')}
+                          className={cn("h-16 rounded-2xl font-bold uppercase text-[10px] tracking-widest", 
+                            selectedPriority === 'High' ? "bg-red-600 hover:bg-red-700 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)]" : "border-red-600/20 text-red-600")}
+                        >Emergencia</Button>
+                      </div>
+                    </div>
+
                     <div className="space-y-4">
                       <Label className="text-xs font-black uppercase tracking-widest text-white/40">Descripción del Problema Médico</Label>
                       <Textarea 
                         placeholder="Describa los síntomas observados, duración y gravedad detectada..." 
-                        className="min-h-[150px] bg-white/[0.03] border-white/10 rounded-2xl focus:ring-[#22c55e] text-base p-6"
+                        className="min-h-[120px] bg-white/[0.03] border-white/10 rounded-2xl focus:ring-[#22c55e] text-base p-6"
                         required
                         value={reportDescription}
                         onChange={(e) => setReportDescription(e.target.value)}
                       />
+                    </div>
+
+                    {/* Selector de Síntomas */}
+                    <div className="space-y-4">
+                      <Label className="text-xs font-black uppercase tracking-widest text-white/40">Sintomatología Detectada</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {SYMPTOMS_LIST.map(s => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => toggleSymptom(s)}
+                            className={cn(
+                              "px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border",
+                              selectedSymptoms.includes(s) 
+                                ? "bg-[#22c55e] border-[#22c55e] text-black" 
+                                : "bg-white/5 border-white/10 text-white/40 hover:border-white/30"
+                            )}
+                          >{s}</button>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -378,44 +429,52 @@ export default function GlobalPulseDashboard() {
 
                       <div className="space-y-4">
                         <Label className="text-xs font-black uppercase tracking-widest text-white/40">Ubicación (Provincia)</Label>
-                        <Select required value={selectedProvince} onValueChange={setSelectedProvince}>
-                          <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl">
-                            <SelectValue placeholder="Seleccionar provincia..." />
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#1e2025] border-white/10 text-white">
-                            {Object.keys(PROVINCIA_COORDINATES).sort().map(prov => (
-                              <SelectItem key={prov} value={prov}>{prov}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex gap-2">
+                          <Select required value={selectedProvince} onValueChange={setSelectedProvince}>
+                            <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl flex-1">
+                              <SelectValue placeholder="Seleccionar..." />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#1e2025] border-white/10 text-white">
+                              {Object.keys(PROVINCIA_COORDINATES).sort().map(prov => (
+                                <SelectItem key={prov} value={prov}>{prov}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="icon" 
+                            onClick={handleAutodetectLocation}
+                            disabled={isLocating}
+                            className="h-14 w-14 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10"
+                            title="Autodetectar Ubicación"
+                          >
+                            {isLocating ? <Loader2 className="animate-spin text-[#22c55e]" /> : <Navigation size={20} className="text-[#22c55e]" />}
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="p-6 bg-[#22c55e]/5 rounded-3xl border border-[#22c55e]/10 flex gap-4 items-start">
-                      <AlertCircle className="text-[#22c55e] shrink-0" size={20} />
-                      <p className="text-xs text-[#22c55e]/70 font-medium leading-relaxed">
-                        El motor VirusAlert IA procesará este informe para actualizar instantáneamente las coordenadas del mapa táctico y alertar a los centros de salud regionales.
-                      </p>
                     </div>
 
                     <Button 
                       type="submit"
-                      className="w-full h-16 bg-[#22c55e] hover:bg-[#22c55e]/90 text-[#0a0a0c] font-black uppercase tracking-[0.2em] rounded-2xl text-xs shadow-[0_0_20px_rgba(34,197,94,0.3)]"
+                      disabled={isPending}
+                      className="w-full h-16 bg-[#22c55e] hover:bg-[#22c55e]/90 text-[#0a0a0c] font-black uppercase tracking-[0.2em] rounded-2xl text-xs shadow-[0_0_20px_rgba(34,197,94,0.3)] disabled:opacity-50"
                     >
-                      <Send size={18} className="mr-2" /> Emitir Informe Crítico
+                      {isPending ? <Loader2 className="animate-spin mr-2" /> : <Send size={18} className="mr-2" />}
+                      Emitir Informe Crítico
                     </Button>
                   </form>
                 </div>
               </div>
             ) : (
               <WorldMap>
-                <OutbreakHeatmap data={outbreakData} onSelectCluster={(cluster) => setSelectedOutbreak(cluster)} />
+                <OutbreakHeatmap data={outbreaks ? { outbreakClusters: outbreaks } : null} onSelectCluster={(cluster) => setSelectedOutbreak(cluster)} />
               </WorldMap>
             )}
           </div>
         </div>
 
-        {/* Diálogo de Detalles de Brote (Universal) */}
+        {/* Diálogo de Detalles de Brote */}
         <Dialog open={!!selectedOutbreak} onOpenChange={() => setSelectedOutbreak(null)}>
           <DialogContent className="bg-[#0c0d0f] border-white/10 text-white max-w-lg rounded-[2.5rem] overflow-hidden p-0 shadow-[0_48px_96px_rgba(0,0,0,0.8)] border-white/5">
             {selectedOutbreak && (
@@ -444,7 +503,7 @@ export default function GlobalPulseDashboard() {
                   <div className="grid grid-cols-2 gap-8">
                     <InfoItem icon={<Activity size={18} className="text-[#22c55e]" />} label="Estado Operativo" value={selectedOutbreak.status} />
                     <InfoItem icon={<Calendar size={18} className="text-[#22c55e]" />} label="Fecha de Registro" value={new Date(selectedOutbreak.reportedDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} />
-                    <InfoItem icon={<AlertCircle size={18} className="text-[#22c55e]" />} label="Índice de Intensidad" value={`${selectedOutbreak.intensity}%`} />
+                    <InfoItem icon={<AlertCircle size={18} className="text-[#22c55e]" />} label="Índice de Intensidad" value={`${selectedOutbreak.intensityLevel || selectedOutbreak.intensity}%`} />
                     <InfoItem icon={<ShieldAlert size={18} className="text-[#22c55e]" />} label="Categoría" value={selectedOutbreak.category} />
                   </div>
 
@@ -453,7 +512,7 @@ export default function GlobalPulseDashboard() {
                       <Info size={14} /> Análisis VirusAlert España
                     </h4>
                     <p className="text-sm text-white/60 leading-relaxed font-medium">
-                      Los protocolos de vigilancia en <span className="text-white">{selectedOutbreak.locationDescription}</span> muestran una intensidad del {selectedOutbreak.intensity}%. Se recomienda activar protocolos regionales fase 2 de contención biológica.
+                      {selectedOutbreak.description || `Los protocolos de vigilancia en ${selectedOutbreak.locationDescription} muestran una intensidad crítica. Se recomienda activar protocolos regionales fase 2 de contención biológica.`}
                     </p>
                   </div>
 
@@ -478,7 +537,7 @@ export default function GlobalPulseDashboard() {
           </DialogContent>
         </Dialog>
 
-        {/* Overlay de Carga */}
+        {/* Overlay de Carga Principal */}
         {isPending && (
           <div className="absolute inset-0 z-50 bg-[#060608]/80 backdrop-blur-2xl flex items-center justify-center">
             <div className="flex flex-col items-center gap-8">
@@ -488,7 +547,7 @@ export default function GlobalPulseDashboard() {
                 <Globe className="absolute inset-0 m-auto text-[#22c55e]/50 animate-pulse" size={32} />
               </div>
               <div className="flex flex-col items-center gap-2">
-                <span className="text-[11px] font-black text-[#22c55e] uppercase tracking-[0.6em] animate-pulse">Sincronizando VirusAlert</span>
+                <span className="text-[11px] font-black text-[#22c55e] uppercase tracking-[0.6em] animate-pulse">Transmitiendo datos cifrados</span>
                 <span className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em]">Actualizando coordenadas nacionales...</span>
               </div>
             </div>
@@ -510,7 +569,6 @@ function NavItem({ icon, label, active = false, onClick }: { icon: React.ReactNo
           : "text-white/30 hover:text-white hover:bg-white/5"
       )}
     >
-      {/* Glow effect for active state */}
       {active && (
         <div className="absolute inset-0 bg-gradient-to-r from-[#22c55e]/5 to-transparent pointer-events-none" />
       )}
