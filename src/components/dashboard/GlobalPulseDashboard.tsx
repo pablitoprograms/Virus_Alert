@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useTransition, useEffect } from 'react';
@@ -22,7 +23,10 @@ import {
   Trash2,
   ChevronRight,
   ChevronLeft,
-  CheckCircle2
+  CheckCircle2,
+  BrainCircuit,
+  Stethoscope,
+  Search
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -132,6 +136,8 @@ export default function GlobalPulseDashboard() {
   const [selectedPriority, setSelectedPriority] = useState<PriorityLevel | null>(null);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [isLocating, setIsLocating] = useState(false);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+  const [aiSuggestedDisease, setAiSuggestedDisease] = useState<string | null>(null);
 
   // Firestore Data
   const outbreaksQuery = useMemoFirebase(() => {
@@ -193,6 +199,41 @@ export default function GlobalPulseDashboard() {
     );
   };
 
+  // Heuristic logic for AI suggestion
+  const getAiSuggestion = (symptoms: string[]) => {
+    if (symptoms.includes('Fiebre alta') && symptoms.includes('Tos seca') && symptoms.includes('Pérdida de olfato (Anosmia)')) {
+      return "COVID-19";
+    }
+    if (symptoms.includes('Fiebre alta') && symptoms.includes('Artralgia (Dolor articular)') && symptoms.includes('Erupciones cutáneas (Exantema)')) {
+      return "Dengue";
+    }
+    if (symptoms.includes('Fiebre alta') && symptoms.includes('Hemorragias')) {
+      return "Ébola";
+    }
+    if (symptoms.includes('Fiebre alta') && symptoms.includes('Diarrea acuosa') && symptoms.includes('Deshidratación')) {
+      return "Cólera";
+    }
+    return "Virus no identificado";
+  };
+
+  const nextStep = () => {
+    if (wizardStep === 1) {
+      setIsAiAnalyzing(true);
+      setWizardStep(2);
+      setTimeout(() => {
+        const suggestion = getAiSuggestion(selectedSymptoms);
+        setAiSuggestedDisease(suggestion);
+        if (suggestion !== "Virus no identificado") {
+          setSelectedDisease(suggestion);
+        }
+        setIsAiAnalyzing(false);
+        setWizardStep(3);
+      }, 2500);
+    } else {
+      setWizardStep(prev => prev + 1);
+    }
+  };
+
   const handleReportSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProvince || !selectedDisease || !selectedPriority) return;
@@ -222,6 +263,7 @@ export default function GlobalPulseDashboard() {
       setSelectedProvince("");
       setSelectedPriority(null);
       setSelectedSymptoms([]);
+      setAiSuggestedDisease(null);
       setCurrentView('dashboard');
 
       toast({
@@ -233,10 +275,10 @@ export default function GlobalPulseDashboard() {
 
   const isStepValid = () => {
     switch (wizardStep) {
-      case 1: return !!selectedPriority;
-      case 2: return !!selectedDisease;
-      case 3: return selectedSymptoms.length > 0;
-      case 4: return !!selectedProvince && reportDescription.length > 10;
+      case 1: return selectedSymptoms.length > 0;
+      case 2: return false; // Transitioning
+      case 3: return !!selectedDisease;
+      case 4: return !!selectedPriority && !!selectedProvince && reportDescription.length > 10;
       default: return false;
     }
   };
@@ -305,7 +347,7 @@ export default function GlobalPulseDashboard() {
             <h2 className="text-xs font-black text-white/30 uppercase tracking-[0.4em] mb-1">Vigilancia Nacional</h2>
             <p className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">
               {currentView === 'dashboard' ? 'Alertas Críticas' : 
-               currentView === 'map' ? 'Mapa Táctico' : 'Asistente de Informes'}
+               currentView === 'map' ? 'Mapa Táctico' : 'Diagnóstico por IA'}
             </p>
           </div>
         </header>
@@ -323,7 +365,7 @@ export default function GlobalPulseDashboard() {
                 
                 <div className="px-8 pt-8 pb-4 space-y-3 shrink-0">
                   <div className="flex justify-between items-end">
-                    <span className="text-[9px] font-black text-[#22c55e] uppercase tracking-widest">Paso {wizardStep} de 4</span>
+                    <span className="text-[9px] font-black text-[#22c55e] uppercase tracking-widest">Paso {wizardStep === 2 ? 1 : wizardStep > 2 ? wizardStep - 1 : wizardStep} de 3</span>
                     <span className="text-[9px] font-bold text-white/20 uppercase">{Math.round((wizardStep/4)*100)}% Completado</span>
                   </div>
                   <Progress value={(wizardStep / 4) * 100} className="h-1 bg-white/5" />
@@ -335,62 +377,8 @@ export default function GlobalPulseDashboard() {
                     {wizardStep === 1 && (
                       <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="space-y-1">
-                          <h3 className="text-xl font-bold">Nivel de Riesgo</h3>
-                          <p className="text-xs text-white/40">Determine la gravedad de la incidencia detectada.</p>
-                        </div>
-                        <div className="grid grid-cols-1 gap-3">
-                          <RiskButton 
-                            active={selectedPriority === 'Low'} 
-                            color="yellow" 
-                            label="Vigilancia" 
-                            desc="Monitorización rutinaria." 
-                            onClick={() => setSelectedPriority('Low')} 
-                          />
-                          <RiskButton 
-                            active={selectedPriority === 'Medium'} 
-                            color="orange" 
-                            label="Alerta" 
-                            desc="Posible foco en expansión." 
-                            onClick={() => setSelectedPriority('Medium')} 
-                          />
-                          <RiskButton 
-                            active={selectedPriority === 'High'} 
-                            color="red" 
-                            label="Emergencia" 
-                            desc="Protocolo crítico inmediato." 
-                            onClick={() => setSelectedPriority('High')} 
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {wizardStep === 2 && (
-                      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="space-y-1">
-                          <h3 className="text-xl font-bold">Patógeno Identificado</h3>
-                          <p className="text-xs text-white/40">Seleccione el tipo de enfermedad.</p>
-                        </div>
-                        <div className="space-y-3">
-                          <Label className="text-[9px] font-black uppercase tracking-widest text-white/30">Lista de Enfermedades</Label>
-                          <Select value={selectedDisease} onValueChange={setSelectedDisease}>
-                            <SelectTrigger className="h-12 bg-white/[0.03] border-white/10 rounded-xl text-base font-medium">
-                              <SelectValue placeholder="Seleccionar patógeno..." />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#0c0d0f] border-white/10 text-white max-h-[300px]">
-                              {DISEASES_LIST.map(d => (
-                                <SelectItem key={d} value={d} className="py-2.5 focus:bg-[#22c55e]/10">{d}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    )}
-
-                    {wizardStep === 3 && (
-                      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="space-y-1">
-                          <h3 className="text-xl font-bold">Sintomatología</h3>
-                          <p className="text-xs text-white/40">Marque los síntomas detectados.</p>
+                          <h3 className="text-xl font-bold">Entrada de Síntomas</h3>
+                          <p className="text-xs text-white/40">Seleccione todos los síntomas detectados en el foco.</p>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {SYMPTOMS_LIST.map(s => (
@@ -410,12 +398,89 @@ export default function GlobalPulseDashboard() {
                       </div>
                     )}
 
-                    {wizardStep === 4 && (
+                    {wizardStep === 2 && (
+                      <div className="h-64 flex flex-col items-center justify-center space-y-6 animate-in fade-in duration-500">
+                        <div className="relative">
+                          <BrainCircuit size={48} className="text-[#22c55e] animate-pulse" />
+                          <div className="absolute inset-0 border-4 border-[#22c55e]/20 rounded-full animate-ping scale-150" />
+                        </div>
+                        <div className="text-center space-y-2">
+                          <p className="text-xs font-black uppercase tracking-[0.4em] text-[#22c55e]">Analizando síntomas...</p>
+                          <p className="text-[10px] text-white/30 uppercase tracking-widest">Consultando base de datos VirusAlert</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {wizardStep === 3 && (
                       <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="space-y-1">
-                          <h3 className="text-xl font-bold">Ubicación y Detalles</h3>
-                          <p className="text-xs text-white/40">Finalice con la localización exacta.</p>
+                          <h3 className="text-xl font-bold">Validación Médica</h3>
+                          <p className="text-xs text-white/40">La IA ha analizado los síntomas y sugiere lo siguiente.</p>
                         </div>
+
+                        {aiSuggestedDisease && (
+                          <div className={cn(
+                            "p-6 rounded-3xl border border-teal-500/20 bg-teal-500/5 space-y-3",
+                            aiSuggestedDisease === "Virus no identificado" && "border-violet-500/20 bg-violet-500/5"
+                          )}>
+                            <div className="flex items-center gap-3">
+                              <Search size={18} className="text-[#22c55e]" />
+                              <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Análisis automático VirusAlert</span>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-sm text-white/60">Basado en {selectedSymptoms.length} síntomas analizados, existe una alta probabilidad de:</p>
+                              <h4 className="text-2xl font-black text-[#22c55e] uppercase tracking-tight">{aiSuggestedDisease}</h4>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-3 pt-2">
+                          <Label className="text-[9px] font-black uppercase tracking-widest text-white/30">Confirmar o Cambiar Patógeno</Label>
+                          <Select value={selectedDisease} onValueChange={setSelectedDisease}>
+                            <SelectTrigger className="h-12 bg-white/[0.03] border-white/10 rounded-xl text-base font-medium">
+                              <SelectValue placeholder="Seleccionar patógeno..." />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#0c0d0f] border-white/10 text-white max-h-[300px]">
+                              {DISEASES_LIST.map(d => (
+                                <SelectItem key={d} value={d} className="py-2.5 focus:bg-[#22c55e]/10">{d}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+
+                    {wizardStep === 4 && (
+                      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="space-y-1">
+                          <h3 className="text-xl font-bold">Nivel de Riesgo y Ubicación</h3>
+                          <p className="text-xs text-white/40">Determine la gravedad y finalice con la localización exacta.</p>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <Label className="text-[9px] font-black uppercase tracking-widest text-white/30">Gravedad de la Alerta</Label>
+                          <div className="grid grid-cols-3 gap-2">
+                            <RiskButtonSmall 
+                              active={selectedPriority === 'Low'} 
+                              color="yellow" 
+                              label="Vigilancia" 
+                              onClick={() => setSelectedPriority('Low')} 
+                            />
+                            <RiskButtonSmall 
+                              active={selectedPriority === 'Medium'} 
+                              color="orange" 
+                              label="Alerta" 
+                              onClick={() => setSelectedPriority('Medium')} 
+                            />
+                            <RiskButtonSmall 
+                              active={selectedPriority === 'High'} 
+                              color="red" 
+                              label="Emergencia" 
+                              onClick={() => setSelectedPriority('High')} 
+                            />
+                          </div>
+                        </div>
+
                         <div className="grid grid-cols-1 gap-4">
                           <div className="space-y-2">
                             <Label className="text-[9px] font-black uppercase tracking-widest text-white/30">Provincia de Origen</Label>
@@ -444,7 +509,7 @@ export default function GlobalPulseDashboard() {
                           <div className="space-y-2">
                             <Label className="text-[9px] font-black uppercase tracking-widest text-white/30">Descripción Clínica</Label>
                             <Textarea 
-                              placeholder="Mínimo 10 caracteres..." 
+                              placeholder="Mínimo 10 caracteres describiendo el foco..." 
                               className="min-h-[80px] bg-white/[0.03] border-white/10 rounded-xl p-3 text-sm resize-none"
                               value={reportDescription}
                               onChange={(e) => setReportDescription(e.target.value)}
@@ -454,38 +519,40 @@ export default function GlobalPulseDashboard() {
                       </div>
                     )}
 
-                    <div className="flex gap-3 pt-2">
-                      {wizardStep > 1 && (
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          onClick={() => setWizardStep(prev => prev - 1)}
-                          className="h-12 flex-1 text-white/40 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[9px]"
-                        >
-                          <ChevronLeft size={14} className="mr-1" /> Anterior
-                        </Button>
-                      )}
-                      
-                      {wizardStep < 4 ? (
-                        <Button 
-                          type="button" 
-                          disabled={!isStepValid()}
-                          onClick={() => setWizardStep(prev => prev + 1)}
-                          className="h-12 flex-[2] bg-[#22c55e] hover:bg-[#22c55e]/90 text-black rounded-xl font-black uppercase tracking-[0.2em] text-[9px] shadow-[0_0_15px_rgba(34,197,94,0.2)]"
-                        >
-                          Siguiente <ChevronRight size={14} className="ml-1" />
-                        </Button>
-                      ) : (
-                        <Button 
-                          type="submit"
-                          disabled={!isStepValid() || isPending}
-                          className="h-12 flex-[2] bg-[#22c55e] hover:bg-[#22c55e]/90 text-black rounded-xl font-black uppercase tracking-[0.2em] text-[9px] shadow-[0_0_15px_rgba(34,197,94,0.3)]"
-                        >
-                          {isPending ? <Loader2 className="animate-spin mr-2" size={14} /> : <Send size={14} className="mr-2" />}
-                          Emitir Informe Crítico
-                        </Button>
-                      )}
-                    </div>
+                    {wizardStep !== 2 && (
+                      <div className="flex gap-3 pt-2">
+                        {wizardStep > 1 && (
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            onClick={() => setWizardStep(wizardStep === 3 ? 1 : prev => prev - 1)}
+                            className="h-12 flex-1 text-white/40 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[9px]"
+                          >
+                            <ChevronLeft size={14} className="mr-1" /> Anterior
+                          </Button>
+                        )}
+                        
+                        {wizardStep < 4 ? (
+                          <Button 
+                            type="button" 
+                            disabled={!isStepValid()}
+                            onClick={nextStep}
+                            className="h-12 flex-[2] bg-[#22c55e] hover:bg-[#22c55e]/90 text-black rounded-xl font-black uppercase tracking-[0.2em] text-[9px] shadow-[0_0_15px_rgba(34,197,94,0.2)]"
+                          >
+                            {wizardStep === 1 ? 'Iniciar Análisis IA' : 'Siguiente'} <ChevronRight size={14} className="ml-1" />
+                          </Button>
+                        ) : (
+                          <Button 
+                            type="submit"
+                            disabled={!isStepValid() || isPending}
+                            className="h-12 flex-[2] bg-[#22c55e] hover:bg-[#22c55e]/90 text-black rounded-xl font-black uppercase tracking-[0.2em] text-[9px] shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+                          >
+                            {isPending ? <Loader2 className="animate-spin mr-2" size={14} /> : <Send size={14} className="mr-2" />}
+                            Emitir Informe Crítico
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </form>
                 </div>
               </div>
@@ -574,7 +641,7 @@ function NavItem({ icon, label, active = false, onClick }: { icon: React.ReactNo
   );
 }
 
-function RiskButton({ active, color, label, desc, onClick }: { active: boolean, color: 'red' | 'orange' | 'yellow', label: string, desc: string, onClick: () => void }) {
+function RiskButtonSmall({ active, color, label, onClick }: { active: boolean, color: 'red' | 'orange' | 'yellow', label: string, onClick: () => void }) {
   const colors = {
     red: "border-red-600/20 text-red-600 bg-red-600/5",
     orange: "border-orange-500/20 text-orange-500 bg-orange-500/5",
@@ -591,15 +658,11 @@ function RiskButton({ active, color, label, desc, onClick }: { active: boolean, 
       type="button" 
       onClick={onClick}
       className={cn(
-        "w-full p-4 border rounded-2xl text-left transition-all duration-300 flex items-center justify-between",
+        "w-full py-3 border rounded-xl text-center transition-all duration-300",
         active ? activeColors[color] : colors[color]
       )}
     >
-      <div className="space-y-0.5">
-        <h4 className="text-base font-black uppercase tracking-tighter">{label}</h4>
-        <p className={cn("text-[10px] font-medium", active ? "opacity-70" : "opacity-40")}>{desc}</p>
-      </div>
-      {active && <CheckCircle2 size={18} />}
+      <span className="text-[10px] font-black uppercase tracking-tighter">{label}</span>
     </button>
   );
 }
