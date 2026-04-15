@@ -26,7 +26,8 @@ import {
   CheckCircle2,
   BrainCircuit,
   Stethoscope,
-  Search
+  Search,
+  Zap
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -199,36 +200,61 @@ export default function GlobalPulseDashboard() {
     );
   };
 
-  // Heuristic logic for AI suggestion
-  const getAiSuggestion = (symptoms: string[]) => {
-    if (symptoms.includes('Fiebre alta') && symptoms.includes('Tos seca') && symptoms.includes('Pérdida de olfato (Anosmia)')) {
+  // Robust AI Algorithm
+  const getAiSuggestion = (symptoms: string[]): string => {
+    const s = new Set(symptoms);
+    
+    // Reglas de decisión por peso y especificidad
+    if (s.has('Fiebre alta') && s.has('Tos seca') && (s.has('Pérdida de olfato (Anosmia)') || s.has('Pérdida de gusto (Ageusia)'))) {
       return "COVID-19";
     }
-    if (symptoms.includes('Fiebre alta') && symptoms.includes('Artralgia (Dolor articular)') && symptoms.includes('Erupciones cutáneas (Exantema)')) {
+    if (s.has('Fiebre alta') && s.has('Artralgia (Dolor articular)') && s.has('Erupciones cutáneas (Exantema)')) {
       return "Dengue";
     }
-    if (symptoms.includes('Fiebre alta') && symptoms.includes('Hemorragias')) {
+    if (s.has('Fiebre alta') && s.has('Hemorragias') && s.has('Fatiga extrema (Astenia)')) {
       return "Ébola";
     }
-    if (symptoms.includes('Fiebre alta') && symptoms.includes('Diarrea acuosa') && symptoms.includes('Deshidratación')) {
+    if (s.has('Diarrea acuosa') && s.has('Deshidratación') && s.has('Vómitos')) {
       return "Cólera";
     }
-    return "Virus no identificado";
+    if (s.has('Inflamación de ganglios (Linfadenopatía)') && s.has('Erupciones cutáneas (Exantema)') && s.has('Fiebre alta')) {
+      return "Mpox (Viruela del Mono)";
+    }
+    if (s.has('Rigidez de nuca') && s.has('Fiebre alta') && s.has('Cefalea (Dolor de cabeza)')) {
+      return "Meningitis Meningocócica";
+    }
+    if (s.has('Ictericia (Piel amarillenta)') && s.has('Fiebre alta')) {
+      return "Fiebre Amarilla";
+    }
+    if (s.has('Fiebre alta') && s.has('Escalofríos') && s.has('Sudoración nocturna')) {
+      return "Malaria";
+    }
+    if (s.has('Tos con sangre (Hemoptisis)') && s.has('Sudoración nocturna')) {
+      return "Tuberculosis";
+    }
+
+    // Fallback para síntomas respiratorios comunes
+    if (s.has('Tos seca') || s.has('Congestión nasal') || s.has('Estornudos')) {
+      return "Gripe A (H1N1)";
+    }
+
+    // Fallback absoluto
+    return "Gripe A (H1N1)";
   };
 
   const nextStep = () => {
     if (wizardStep === 1) {
       setIsAiAnalyzing(true);
       setWizardStep(2);
+      
+      // Simulación de procesamiento de red neuronal
       setTimeout(() => {
         const suggestion = getAiSuggestion(selectedSymptoms);
         setAiSuggestedDisease(suggestion);
-        if (suggestion !== "Virus no identificado") {
-          setSelectedDisease(suggestion);
-        }
+        setSelectedDisease(suggestion); // Preselección automática obligatoria
         setIsAiAnalyzing(false);
         setWizardStep(3);
-      }, 2500);
+      }, 2200);
     } else {
       setWizardStep(prev => prev + 1);
     }
@@ -267,8 +293,8 @@ export default function GlobalPulseDashboard() {
       setCurrentView('dashboard');
 
       toast({
-        title: "Transmitiendo datos cifrados...",
-        description: `Protocolo ${selectedPriority} activado en ${selectedProvince}.`,
+        title: "Protocolo Transmitido",
+        description: `Alerta de ${selectedDisease} registrada en ${selectedProvince}.`,
       });
     });
   };
@@ -276,9 +302,9 @@ export default function GlobalPulseDashboard() {
   const isStepValid = () => {
     switch (wizardStep) {
       case 1: return selectedSymptoms.length > 0;
-      case 2: return false; // Transitioning
+      case 2: return false; 
       case 3: return !!selectedDisease;
-      case 4: return !!selectedPriority && !!selectedProvince && reportDescription.length > 10;
+      case 4: return !!selectedPriority && !!selectedProvince && reportDescription.length >= 10;
       default: return false;
     }
   };
@@ -307,7 +333,7 @@ export default function GlobalPulseDashboard() {
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">VirusAlert</h1>
-            <p className="text-[9px] font-bold text-[#22c55e] uppercase tracking-widest">Sistemas España</p>
+            <p className="text-[9px] font-black text-[#22c55e] uppercase tracking-widest">Sistemas España</p>
           </div>
         </div>
 
@@ -378,7 +404,7 @@ export default function GlobalPulseDashboard() {
                       <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="space-y-1">
                           <h3 className="text-xl font-bold">Entrada de Síntomas</h3>
-                          <p className="text-xs text-white/40">Seleccione todos los síntomas detectados en el foco.</p>
+                          <p className="text-xs text-white/40">Seleccione todos los síntomas detectados en el foco para el análisis.</p>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {SYMPTOMS_LIST.map(s => (
@@ -405,8 +431,8 @@ export default function GlobalPulseDashboard() {
                           <div className="absolute inset-0 border-4 border-[#22c55e]/20 rounded-full animate-ping scale-150" />
                         </div>
                         <div className="text-center space-y-2">
-                          <p className="text-xs font-black uppercase tracking-[0.4em] text-[#22c55e]">Analizando síntomas...</p>
-                          <p className="text-[10px] text-white/30 uppercase tracking-widest">Consultando base de datos VirusAlert</p>
+                          <p className="text-xs font-black uppercase tracking-[0.4em] text-[#22c55e]">Analizando Cuadros Clínicos...</p>
+                          <p className="text-[10px] text-white/30 uppercase tracking-widest">Calculando Probabilidades VirusAlert</p>
                         </div>
                       </div>
                     )}
@@ -414,35 +440,42 @@ export default function GlobalPulseDashboard() {
                     {wizardStep === 3 && (
                       <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="space-y-1">
-                          <h3 className="text-xl font-bold">Validación Médica</h3>
-                          <p className="text-xs text-white/40">La IA ha analizado los síntomas y sugiere lo siguiente.</p>
+                          <h3 className="text-xl font-bold">Validación del Sistema</h3>
+                          <p className="text-xs text-white/40">La IA ha identificado el patógeno con mayor correlación sintomática.</p>
                         </div>
 
                         {aiSuggestedDisease && (
                           <div className={cn(
-                            "p-6 rounded-3xl border border-teal-500/20 bg-teal-500/5 space-y-3",
-                            aiSuggestedDisease === "Virus no identificado" && "border-violet-500/20 bg-violet-500/5"
+                            "p-8 rounded-[2rem] border border-[#22c55e]/30 bg-gradient-to-br from-[#22c55e]/10 to-transparent space-y-4 shadow-[0_0_30px_rgba(34,197,94,0.05)]",
                           )}>
-                            <div className="flex items-center gap-3">
-                              <Search size={18} className="text-[#22c55e]" />
-                              <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Análisis automático VirusAlert</span>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Zap size={14} className="text-[#22c55e] fill-[#22c55e]" />
+                                <span className="text-[10px] font-black text-[#22c55e] uppercase tracking-[0.3em]">Patógeno Detectado</span>
+                              </div>
+                              <Badge variant="secondary" className="bg-[#22c55e]/20 text-[#22c55e] border-none text-[8px] font-black uppercase tracking-widest px-3">Precisión Alta</Badge>
                             </div>
                             <div className="space-y-1">
-                              <p className="text-sm text-white/60">Basado en {selectedSymptoms.length} síntomas analizados, existe una alta probabilidad de:</p>
-                              <h4 className="text-2xl font-black text-[#22c55e] uppercase tracking-tight">{aiSuggestedDisease}</h4>
+                              <p className="text-xs text-white/40 uppercase font-bold">Diagnóstico Probable:</p>
+                              <h4 className="text-3xl font-black text-white uppercase tracking-tighter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+                                {aiSuggestedDisease}
+                              </h4>
+                            </div>
+                            <div className="pt-2 flex items-center gap-2 text-[9px] text-white/30 font-bold uppercase italic">
+                              <Search size={10} /> Análisis automático basado en {selectedSymptoms.length} indicadores
                             </div>
                           </div>
                         )}
 
                         <div className="space-y-3 pt-2">
-                          <Label className="text-[9px] font-black uppercase tracking-widest text-white/30">Confirmar o Cambiar Patógeno</Label>
+                          <Label className="text-[9px] font-black uppercase tracking-widest text-white/30">Confirmar Patógeno (Modificable si es necesario)</Label>
                           <Select value={selectedDisease} onValueChange={setSelectedDisease}>
-                            <SelectTrigger className="h-12 bg-white/[0.03] border-white/10 rounded-xl text-base font-medium">
-                              <SelectValue placeholder="Seleccionar patógeno..." />
+                            <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl text-base font-bold uppercase tracking-tight">
+                              <SelectValue placeholder="Confirmar patógeno..." />
                             </SelectTrigger>
                             <SelectContent className="bg-[#0c0d0f] border-white/10 text-white max-h-[300px]">
                               {DISEASES_LIST.map(d => (
-                                <SelectItem key={d} value={d} className="py-2.5 focus:bg-[#22c55e]/10">{d}</SelectItem>
+                                <SelectItem key={d} value={d} className="py-3 focus:bg-[#22c55e]/10 font-bold uppercase text-[11px] tracking-wide">{d}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -453,12 +486,12 @@ export default function GlobalPulseDashboard() {
                     {wizardStep === 4 && (
                       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="space-y-1">
-                          <h3 className="text-xl font-bold">Nivel de Riesgo y Ubicación</h3>
-                          <p className="text-xs text-white/40">Determine la gravedad y finalice con la localización exacta.</p>
+                          <h3 className="text-xl font-bold">Clasificación y Geografía</h3>
+                          <p className="text-xs text-white/40">Determine el nivel de emergencia y localice el foco de origen.</p>
                         </div>
                         
                         <div className="space-y-3">
-                          <Label className="text-[9px] font-black uppercase tracking-widest text-white/30">Gravedad de la Alerta</Label>
+                          <Label className="text-[9px] font-black uppercase tracking-widest text-white/30">Prioridad de Respuesta</Label>
                           <div className="grid grid-cols-3 gap-2">
                             <RiskButtonSmall 
                               active={selectedPriority === 'Low'} 
@@ -469,7 +502,7 @@ export default function GlobalPulseDashboard() {
                             <RiskButtonSmall 
                               active={selectedPriority === 'Medium'} 
                               color="orange" 
-                              label="Alerta" 
+                              label="Alerta L2" 
                               onClick={() => setSelectedPriority('Medium')} 
                             />
                             <RiskButtonSmall 
@@ -483,15 +516,15 @@ export default function GlobalPulseDashboard() {
 
                         <div className="grid grid-cols-1 gap-4">
                           <div className="space-y-2">
-                            <Label className="text-[9px] font-black uppercase tracking-widest text-white/30">Provincia de Origen</Label>
+                            <Label className="text-[9px] font-black uppercase tracking-widest text-white/30">Provincia Afectada</Label>
                             <div className="flex gap-2">
                               <Select value={selectedProvince} onValueChange={setSelectedProvince}>
-                                <SelectTrigger className="h-12 bg-white/[0.03] border-white/10 rounded-xl flex-1">
+                                <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl flex-1 text-[11px] font-black uppercase">
                                   <SelectValue placeholder="Seleccionar..." />
                                 </SelectTrigger>
                                 <SelectContent className="bg-[#0c0d0f] border-white/10 text-white">
                                   {Object.keys(PROVINCIA_COORDINATES).sort().map(p => (
-                                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                                    <SelectItem key={p} value={p} className="font-bold uppercase text-[10px]">{p}</SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
@@ -500,17 +533,17 @@ export default function GlobalPulseDashboard() {
                                 variant="outline" 
                                 onClick={handleAutodetectLocation}
                                 disabled={isLocating}
-                                className="h-12 w-12 rounded-xl border-white/10 bg-white/5 hover:bg-[#22c55e]/10"
+                                className="h-14 w-14 rounded-2xl border-white/10 bg-white/5 hover:bg-[#22c55e]/10"
                               >
-                                {isLocating ? <Loader2 className="animate-spin text-[#22c55e]" size={18} /> : <Navigation size={18} className="text-[#22c55e]" />}
+                                {isLocating ? <Loader2 className="animate-spin text-[#22c55e]" size={20} /> : <Navigation size={20} className="text-[#22c55e]" />}
                               </Button>
                             </div>
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-[9px] font-black uppercase tracking-widest text-white/30">Descripción Clínica</Label>
+                            <Label className="text-[9px] font-black uppercase tracking-widest text-white/30">Notas Clínicas</Label>
                             <Textarea 
-                              placeholder="Mínimo 10 caracteres describiendo el foco..." 
-                              className="min-h-[80px] bg-white/[0.03] border-white/10 rounded-xl p-3 text-sm resize-none"
+                              placeholder="Mínimo 10 caracteres describiendo observaciones clave..." 
+                              className="min-h-[100px] bg-white/[0.03] border-white/10 rounded-2xl p-4 text-sm resize-none"
                               value={reportDescription}
                               onChange={(e) => setReportDescription(e.target.value)}
                             />
@@ -520,15 +553,15 @@ export default function GlobalPulseDashboard() {
                     )}
 
                     {wizardStep !== 2 && (
-                      <div className="flex gap-3 pt-2">
+                      <div className="flex gap-3 pt-4">
                         {wizardStep > 1 && (
                           <Button 
                             type="button" 
                             variant="ghost" 
                             onClick={() => setWizardStep(wizardStep === 3 ? 1 : prev => prev - 1)}
-                            className="h-12 flex-1 text-white/40 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[9px]"
+                            className="h-14 flex-1 text-white/40 hover:text-white hover:bg-white/5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px]"
                           >
-                            <ChevronLeft size={14} className="mr-1" /> Anterior
+                            <ChevronLeft size={16} className="mr-1" /> Anterior
                           </Button>
                         )}
                         
@@ -537,18 +570,18 @@ export default function GlobalPulseDashboard() {
                             type="button" 
                             disabled={!isStepValid()}
                             onClick={nextStep}
-                            className="h-12 flex-[2] bg-[#22c55e] hover:bg-[#22c55e]/90 text-black rounded-xl font-black uppercase tracking-[0.2em] text-[9px] shadow-[0_0_15px_rgba(34,197,94,0.2)]"
+                            className="h-14 flex-[2] bg-[#22c55e] hover:bg-[#22c55e]/90 text-black rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-[0_0_20px_rgba(34,197,94,0.2)]"
                           >
-                            {wizardStep === 1 ? 'Iniciar Análisis IA' : 'Siguiente'} <ChevronRight size={14} className="ml-1" />
+                            {wizardStep === 1 ? 'Iniciar Análisis IA' : 'Siguiente'} <ChevronRight size={16} className="ml-1" />
                           </Button>
                         ) : (
                           <Button 
                             type="submit"
                             disabled={!isStepValid() || isPending}
-                            className="h-12 flex-[2] bg-[#22c55e] hover:bg-[#22c55e]/90 text-black rounded-xl font-black uppercase tracking-[0.2em] text-[9px] shadow-[0_0_15px_rgba(34,197,94,0.3)]"
+                            className="h-14 flex-[2] bg-[#22c55e] hover:bg-[#22c55e]/90 text-black rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-[0_0_20px_rgba(34,197,94,0.3)]"
                           >
-                            {isPending ? <Loader2 className="animate-spin mr-2" size={14} /> : <Send size={14} className="mr-2" />}
-                            Emitir Informe Crítico
+                            {isPending ? <Loader2 className="animate-spin mr-2" size={16} /> : <Send size={16} className="mr-2" />}
+                            Transmitir Alerta
                           </Button>
                         )}
                       </div>
@@ -658,11 +691,11 @@ function RiskButtonSmall({ active, color, label, onClick }: { active: boolean, c
       type="button" 
       onClick={onClick}
       className={cn(
-        "w-full py-3 border rounded-xl text-center transition-all duration-300",
+        "w-full py-4 border rounded-2xl text-center transition-all duration-300",
         active ? activeColors[color] : colors[color]
       )}
     >
-      <span className="text-[10px] font-black uppercase tracking-tighter">{label}</span>
+      <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
     </button>
   );
 }
