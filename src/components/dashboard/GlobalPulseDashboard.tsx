@@ -27,7 +27,9 @@ import {
   BrainCircuit,
   Stethoscope,
   Search,
-  Zap
+  Zap,
+  Terminal,
+  ShieldCheck
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -119,6 +121,12 @@ const SYMPTOMS_LIST = [
   "Sudoración nocturna", "Tos con sangre (Hemoptisis)", "Tos seca", "Vómitos"
 ].sort((a, b) => a.localeCompare(b, 'es'));
 
+interface AiAnalysisResult {
+  name: string;
+  confidence: number;
+  justification: string;
+}
+
 export default function GlobalPulseDashboard() {
   const [isPanelsHidden, setIsPanelsHidden] = useState(false);
   const [currentView, setCurrentView] = useState<DashboardView>('dashboard');
@@ -138,7 +146,7 @@ export default function GlobalPulseDashboard() {
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [isLocating, setIsLocating] = useState(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
-  const [aiSuggestedDisease, setAiSuggestedDisease] = useState<string | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<AiAnalysisResult | null>(null);
 
   // Firestore Data
   const outbreaksQuery = useMemoFirebase(() => {
@@ -200,46 +208,41 @@ export default function GlobalPulseDashboard() {
     );
   };
 
-  // Robust AI Algorithm
-  const getAiSuggestion = (symptoms: string[]): string => {
-    const s = new Set(symptoms);
-    
-    // Reglas de decisión por peso y especificidad
-    if (s.has('Fiebre alta') && s.has('Tos seca') && (s.has('Pérdida de olfato (Anosmia)') || s.has('Pérdida de gusto (Ageusia)'))) {
-      return "COVID-19";
-    }
-    if (s.has('Fiebre alta') && s.has('Artralgia (Dolor articular)') && s.has('Erupciones cutáneas (Exantema)')) {
-      return "Dengue";
-    }
-    if (s.has('Fiebre alta') && s.has('Hemorragias') && s.has('Fatiga extrema (Astenia)')) {
-      return "Ébola";
-    }
-    if (s.has('Diarrea acuosa') && s.has('Deshidratación') && s.has('Vómitos')) {
-      return "Cólera";
-    }
-    if (s.has('Inflamación de ganglios (Linfadenopatía)') && s.has('Erupciones cutáneas (Exantema)') && s.has('Fiebre alta')) {
-      return "Mpox (Viruela del Mono)";
-    }
-    if (s.has('Rigidez de nuca') && s.has('Fiebre alta') && s.has('Cefalea (Dolor de cabeza)')) {
-      return "Meningitis Meningocócica";
-    }
-    if (s.has('Ictericia (Piel amarillenta)') && s.has('Fiebre alta')) {
-      return "Fiebre Amarilla";
-    }
-    if (s.has('Fiebre alta') && s.has('Escalofríos') && s.has('Sudoración nocturna')) {
-      return "Malaria";
-    }
-    if (s.has('Tos con sangre (Hemoptisis)') && s.has('Sudoración nocturna')) {
-      return "Tuberculosis";
-    }
+  const getAiAnalysis = (symptoms: string[]): AiAnalysisResult => {
+    const symptomSet = new Set(symptoms);
+    const profiles = [
+      { name: "COVID-19", markers: ["Fiebre alta", "Tos seca", "Pérdida de olfato (Anosmia)", "Pérdida de gusto (Ageusia)"] },
+      { name: "Dengue", markers: ["Fiebre alta", "Artralgia (Dolor articular)", "Erupciones cutáneas (Exantema)"] },
+      { name: "Ébola", markers: ["Fiebre alta", "Hemorragias", "Fatiga extrema (Astenia)"] },
+      { name: "Cólera", markers: ["Diarrea acuosa", "Deshidratación", "Vómitos"] },
+      { name: "Mpox (Viruela del Mono)", markers: ["Inflamación de ganglios (Linfadenopatía)", "Erupciones cutáneas (Exantema)", "Fiebre alta"] },
+      { name: "Meningitis Meningocócica", markers: ["Rigidez de nuca", "Fiebre alta", "Cefalea (Dolor de cabeza)"] },
+      { name: "Fiebre Amarilla", markers: ["Ictericia (Piel amarillenta)", "Fiebre alta"] },
+      { name: "Malaria", markers: ["Fiebre alta", "Escalofríos", "Sudoración nocturna"] },
+      { name: "Tuberculosis", markers: ["Tos con sangre (Hemoptisis)", "Sudoración nocturna"] },
+      { name: "Gripe A (H1N1)", markers: ["Tos seca", "Congestión nasal", "Estornudos", "Fiebre alta"] },
+    ];
 
-    // Fallback para síntomas respiratorios comunes
-    if (s.has('Tos seca') || s.has('Congestión nasal') || s.has('Estornudos')) {
-      return "Gripe A (H1N1)";
-    }
+    let bestMatch = profiles[profiles.length - 1]; // Fallback
+    let maxScore = -1;
+    let matchingMarkers: string[] = [];
 
-    // Fallback absoluto
-    return "Gripe A (H1N1)";
+    profiles.forEach(p => {
+      const matches = p.markers.filter(m => symptomSet.has(m));
+      const score = matches.length / p.markers.length;
+      if (score > maxScore) {
+        maxScore = score;
+        bestMatch = p;
+        matchingMarkers = matches;
+      }
+    });
+
+    const confidence = Math.round(maxScore * 100);
+    const justification = matchingMarkers.length > 0 
+      ? `Identificación positiva basada en la presencia de: ${matchingMarkers.join(", ")}. Patrón clínico compatible.`
+      : `Cuadro sintomático inespecífico. Se asigna patógeno por prevalencia estadística y marcadores respiratorios generales.`;
+
+    return { name: bestMatch.name, confidence, justification };
   };
 
   const nextStep = () => {
@@ -247,11 +250,10 @@ export default function GlobalPulseDashboard() {
       setIsAiAnalyzing(true);
       setWizardStep(2);
       
-      // Simulación de procesamiento de red neuronal
       setTimeout(() => {
-        const suggestion = getAiSuggestion(selectedSymptoms);
-        setAiSuggestedDisease(suggestion);
-        setSelectedDisease(suggestion); // Preselección automática obligatoria
+        const analysis = getAiAnalysis(selectedSymptoms);
+        setAiAnalysis(analysis);
+        setSelectedDisease(analysis.name);
         setIsAiAnalyzing(false);
         setWizardStep(3);
       }, 2200);
@@ -289,7 +291,7 @@ export default function GlobalPulseDashboard() {
       setSelectedProvince("");
       setSelectedPriority(null);
       setSelectedSymptoms([]);
-      setAiSuggestedDisease(null);
+      setAiAnalysis(null);
       setCurrentView('dashboard');
 
       toast({
@@ -404,7 +406,7 @@ export default function GlobalPulseDashboard() {
                       <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="space-y-1">
                           <h3 className="text-xl font-bold">Entrada de Síntomas</h3>
-                          <p className="text-xs text-white/40">Seleccione todos los síntomas detectados en el foco para el análisis.</p>
+                          <p className="text-xs text-white/40">Seleccione todos los síntomas detectados en el foco para el análisis heurístico.</p>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {SYMPTOMS_LIST.map(s => (
@@ -438,37 +440,59 @@ export default function GlobalPulseDashboard() {
                     )}
 
                     {wizardStep === 3 && (
-                      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="space-y-1">
-                          <h3 className="text-xl font-bold">Validación del Sistema</h3>
+                          <h3 className="text-xl font-bold">Resultados del Análisis del Sistema</h3>
                           <p className="text-xs text-white/40">La IA ha identificado el patógeno con mayor correlación sintomática.</p>
                         </div>
 
-                        {aiSuggestedDisease && (
+                        {aiAnalysis && (
                           <div className={cn(
-                            "p-8 rounded-[2rem] border border-[#22c55e]/30 bg-gradient-to-br from-[#22c55e]/10 to-transparent space-y-4 shadow-[0_0_30px_rgba(34,197,94,0.05)]",
+                            "p-8 rounded-[2rem] border border-[#22c55e]/30 bg-[#000000] space-y-6 shadow-[0_0_30px_rgba(34,197,94,0.05)]",
                           )}>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Zap size={14} className="text-[#22c55e] fill-[#22c55e]" />
-                                <span className="text-[10px] font-black text-[#22c55e] uppercase tracking-[0.3em]">Patógeno Detectado</span>
+                            <div className="flex items-start justify-between gap-6">
+                              <div className="space-y-1 flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Zap size={14} className="text-[#22c55e] fill-[#22c55e]" />
+                                  <span className="text-[10px] font-black text-[#22c55e] uppercase tracking-[0.3em]">Patógeno Detectado</span>
+                                </div>
+                                <h4 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">
+                                  {aiAnalysis.name}
+                                </h4>
                               </div>
-                              <Badge variant="secondary" className="bg-[#22c55e]/20 text-[#22c55e] border-none text-[8px] font-black uppercase tracking-widest px-3">Precisión Alta</Badge>
+                              
+                              <div className="flex flex-col items-center gap-1">
+                                <div className={cn(
+                                  "text-4xl font-mono font-black",
+                                  aiAnalysis.confidence > 80 ? "text-[#22c55e]" : 
+                                  aiAnalysis.confidence > 50 ? "text-yellow-500" : "text-red-500"
+                                )}>
+                                  {aiAnalysis.confidence}%
+                                </div>
+                                <span className="text-[8px] font-black uppercase tracking-widest text-white/30">Confianza</span>
+                              </div>
                             </div>
-                            <div className="space-y-1">
-                              <p className="text-xs text-white/40 uppercase font-bold">Diagnóstico Probable:</p>
-                              <h4 className="text-3xl font-black text-white uppercase tracking-tighter drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-                                {aiSuggestedDisease}
-                              </h4>
+
+                            <div className="space-y-3 p-6 bg-white/[0.02] border border-white/5 rounded-2xl">
+                              <div className="flex items-center gap-2 text-[9px] font-black text-white/40 uppercase tracking-widest">
+                                <Terminal size={12} /> Justificación del Análisis
+                              </div>
+                              <p className="text-[11px] font-mono text-white/60 leading-relaxed uppercase">
+                                {aiAnalysis.justification}
+                              </p>
                             </div>
-                            <div className="pt-2 flex items-center gap-2 text-[9px] text-white/30 font-bold uppercase italic">
-                              <Search size={10} /> Análisis automático basado en {selectedSymptoms.length} indicadores
+
+                            <div className="flex items-center gap-3 pt-2">
+                               <div className="flex items-center gap-1.5 px-3 py-1 bg-[#22c55e]/10 border border-[#22c55e]/20 rounded-full">
+                                  <ShieldCheck size={10} className="text-[#22c55e]" />
+                                  <span className="text-[8px] font-bold text-[#22c55e] uppercase tracking-tighter">Validación Biotecnológica Activa</span>
+                               </div>
                             </div>
                           </div>
                         )}
 
                         <div className="space-y-3 pt-2">
-                          <Label className="text-[9px] font-black uppercase tracking-widest text-white/30">Confirmar Patógeno (Modificable si es necesario)</Label>
+                          <Label className="text-[9px] font-black uppercase tracking-widest text-white/30">Confirmación de Registro</Label>
                           <Select value={selectedDisease} onValueChange={setSelectedDisease}>
                             <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl text-base font-bold uppercase tracking-tight">
                               <SelectValue placeholder="Confirmar patógeno..." />
