@@ -1,17 +1,18 @@
+
 'use client';
 
 import React, { useState } from 'react';
-import { Globe, ShieldCheck, Mail, Lock, UserPlus } from 'lucide-react';
+import { Globe, ShieldCheck, User, Lock, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useAuth } from '@/firebase';
-import { initiateEmailSignIn, initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { useToast } from '@/hooks/use-toast';
 
 export function AuthScreen() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const auth = useAuth();
@@ -20,19 +21,26 @@ export function AuthScreen() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    initiateEmailSignIn(auth, email, password)
-      .catch((error: any) => {
-        setIsLoading(false);
-        let message = "No se pudo iniciar sesión. Verifica tus credenciales.";
-        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-          message = "Email o contraseña incorrectos. Por favor, inténtalo de nuevo.";
-        }
-        toast({
-          variant: "destructive",
-          title: "Error de acceso",
-          description: message,
+
+    // Lógica dinámica: Usuario debe ser igual a Contraseña
+    if (username === password && username.length > 0) {
+      initiateAnonymousSignIn(auth)
+        .catch((error: any) => {
+          setIsLoading(false);
+          toast({
+            variant: "destructive",
+            title: "Error de acceso",
+            description: "No se pudo establecer la conexión con el servidor.",
+          });
         });
+    } else {
+      setIsLoading(false);
+      toast({
+        variant: "destructive",
+        title: "Credenciales Inválidas",
+        description: "El nombre de usuario y la contraseña deben coincidir exactamente.",
       });
+    }
   };
 
   const handleGuestLogin = () => {
@@ -60,23 +68,23 @@ export function AuthScreen() {
             <Globe className="text-[#0a0a0c]" size={32} />
           </div>
           <div className="text-center space-y-2">
-            <CardTitle className="text-3xl font-black tracking-tighter uppercase">Acceso VirusAlert</CardTitle>
-            <CardDescription className="text-white/40 font-bold uppercase tracking-widest text-[10px]">Terminal de Vigilancia Epidemiológica</CardDescription>
+            <CardTitle className="text-3xl font-black tracking-tighter uppercase">VirusAlert Terminal</CardTitle>
+            <CardDescription className="text-white/40 font-bold uppercase tracking-widest text-[10px]">Acceso de Operador Autorizado</CardDescription>
           </div>
         </CardHeader>
 
         <CardContent className="px-10 space-y-6">
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Email de Operador</Label>
+              <Label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Nombre de Usuario</Label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
                 <Input 
-                  type="email" 
-                  placeholder="operador@virusalert.es" 
+                  type="text" 
+                  placeholder="admin" 
                   className="h-14 bg-white/[0.03] border-white/10 rounded-2xl pl-12 text-sm focus:ring-[#22c55e]"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   required
                 />
               </div>
@@ -102,7 +110,7 @@ export function AuthScreen() {
               className="w-full h-14 bg-white text-black hover:bg-white/90 font-black uppercase tracking-widest rounded-2xl text-xs transition-all disabled:opacity-50"
               disabled={isLoading}
             >
-              {isLoading ? "Sincronizando..." : "Iniciar Sesión"}
+              {isLoading ? "Validando Protocolos..." : "Iniciar Sesión"}
             </Button>
           </form>
 
@@ -111,7 +119,7 @@ export function AuthScreen() {
               <span className="w-full border-t border-white/5" />
             </div>
             <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest">
-              <span className="bg-[#0c0d0f] px-4 text-white/20">Acceso Alternativo</span>
+              <span className="bg-[#0c0d0f] px-4 text-white/20">Modo de Pruebas</span>
             </div>
           </div>
 
@@ -128,7 +136,7 @@ export function AuthScreen() {
         <CardFooter className="pb-12 pt-6 flex flex-col gap-4 items-center">
           <div className="flex items-center gap-2 px-4 py-1.5 bg-[#22c55e]/5 border border-[#22c55e]/10 rounded-full">
             <ShieldCheck size={12} className="text-[#22c55e]" />
-            <span className="text-[9px] font-bold text-[#22c55e] uppercase tracking-tighter">Conexión Encriptada TLS 1.3</span>
+            <span className="text-[9px] font-bold text-[#22c55e] uppercase tracking-tighter">Validación Biométrica Deshabilitada</span>
           </div>
         </CardFooter>
       </Card>

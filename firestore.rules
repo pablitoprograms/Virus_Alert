@@ -9,7 +9,7 @@ service cloud.firestore {
     match /outbreaks/{outbreakId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn();
-      allow update, delete: if false; // Only system or specific roles should update/delete in production
+      allow update, delete: if isSignedIn();
     }
 
     match /userProfiles/{userId} {

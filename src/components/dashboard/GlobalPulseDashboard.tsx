@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useTransition, useMemo } from 'react';
+import React, { useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { 
   LayoutDashboard, 
@@ -19,7 +19,8 @@ import {
   Info,
   ShieldAlert,
   Loader2,
-  Navigation
+  Navigation,
+  Trash2
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -31,8 +32,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useAuth, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { signOut } from "firebase/auth";
-import { collection, query, orderBy, limit } from "firebase/firestore";
-import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { collection, query, orderBy, limit, doc } from "firebase/firestore";
+import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 // Importación dinámica para evitar errores de SSR con Leaflet
 const WorldMap = dynamic(() => import('./WorldMap').then((mod) => mod.WorldMap), {
@@ -135,6 +136,20 @@ export default function GlobalPulseDashboard() {
         description: "No se pudo cerrar la sesión.",
       });
     }
+  };
+
+  const handleDeleteOutbreak = (id: string) => {
+    if (!id) return;
+    
+    startTransition(() => {
+      const docRef = doc(db, 'outbreaks', id);
+      deleteDocumentNonBlocking(docRef);
+      setSelectedOutbreak(null);
+      toast({
+        title: "Registro Eliminado",
+        description: "El informe ha sido borrado permanentemente de la red VirusAlert.",
+      });
+    });
   };
 
   const toggleSymptom = (symptom: string) => {
@@ -340,7 +355,7 @@ export default function GlobalPulseDashboard() {
             {currentView === 'dashboard' ? (
               <div className="absolute inset-0 bg-[#060608] p-8 pt-36 overflow-hidden z-10 flex justify-center items-start">
                 <div className="w-full max-w-4xl h-[calc(100vh-250px)] bg-[#0c0d0f]/50 border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
-                  <RecentAlerts outbreaks={outbreaks || []} onSelect={(alert) => setSelectedOutbreak(alert)} />
+                  <RecentAlerts outbreaks={outbreaks || []} onSelect={(alert) => setSelectedOutbreak(alert)} onDelete={handleDeleteOutbreak} />
                 </div>
               </div>
             ) : currentView === 'reports' ? (
@@ -518,17 +533,17 @@ export default function GlobalPulseDashboard() {
 
                   <div className="flex gap-4">
                     <Button 
-                      variant="outline"
-                      className="flex-1 border-white/10 hover:bg-white/5 text-white/60 font-black uppercase tracking-widest h-14 rounded-2xl text-[10px]"
-                      onClick={() => setSelectedOutbreak(null)}
+                      variant="ghost"
+                      className="flex-1 text-red-500 hover:text-red-400 hover:bg-red-500/10 font-black uppercase tracking-widest h-14 rounded-2xl text-[10px]"
+                      onClick={() => handleDeleteOutbreak(selectedOutbreak.id)}
                     >
-                      Cerrar
+                      <Trash2 size={16} className="mr-2" /> Eliminar
                     </Button>
                     <Button 
-                      className="flex-[2] bg-[#22c55e] hover:bg-[#22c55e]/90 text-[#0a0a0c] font-black uppercase tracking-widest h-14 rounded-2xl text-[10px] shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      className="flex-[2] bg-[#22c55e] hover:bg-[#22c55e]/90 text-[#0a0a0c] font-black uppercase tracking-widest h-14 rounded-2xl text-[10px] shadow-[0_0_20px_rgba(34,197,94,0.3)]"
                       onClick={() => setSelectedOutbreak(null)}
                     >
-                      Activar Protocolo
+                      Archivar Protocolo
                     </Button>
                   </div>
                 </div>
@@ -547,7 +562,7 @@ export default function GlobalPulseDashboard() {
                 <Globe className="absolute inset-0 m-auto text-[#22c55e]/50 animate-pulse" size={32} />
               </div>
               <div className="flex flex-col items-center gap-2">
-                <span className="text-[11px] font-black text-[#22c55e] uppercase tracking-[0.6em] animate-pulse">Transmitiendo datos cifrados</span>
+                <span className="text-[11px] font-black text-[#22c55e] uppercase tracking-[0.6em] animate-pulse">Sincronizando con la red</span>
                 <span className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em]">Actualizando coordenadas nacionales...</span>
               </div>
             </div>

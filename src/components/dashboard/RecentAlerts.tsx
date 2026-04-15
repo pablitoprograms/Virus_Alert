@@ -3,10 +3,12 @@
 
 import React from 'react';
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Clock, MapPin } from 'lucide-react';
+import { AlertTriangle, Clock, MapPin, Trash2 } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 
 interface Outbreak {
+  id: string;
   diseaseName: string;
   locationDescription: string;
   priority: 'High' | 'Medium' | 'Low';
@@ -19,14 +21,15 @@ interface Outbreak {
 interface RecentAlertsProps {
   outbreaks: Outbreak[];
   onSelect: (outbreak: Outbreak) => void;
+  onDelete: (id: string) => void;
 }
 
-export function RecentAlerts({ outbreaks, onSelect }: RecentAlertsProps) {
+export function RecentAlerts({ outbreaks, onSelect, onDelete }: RecentAlertsProps) {
   return (
     <div className="w-full h-full flex flex-col p-6 gap-6 overflow-hidden">
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-3">
-          <AlertTriangle className="text-orange-500" size={18} />
+          <AlertTriangle className="text-[#22c55e]" size={18} />
           <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white/80">Monitorización Nacional</h3>
         </div>
         <div className="flex flex-col gap-2">
@@ -48,10 +51,10 @@ export function RecentAlerts({ outbreaks, onSelect }: RecentAlertsProps) {
       <ScrollArea className="flex-1 w-full">
         <div className="flex flex-col space-y-4 pr-4">
           {outbreaks.map((outbreak, i) => (
-            <AlertCard key={i} outbreak={outbreak} onClick={() => onSelect(outbreak)} />
+            <AlertCard key={outbreak.id || i} outbreak={outbreak} onClick={() => onSelect(outbreak)} onDelete={() => onDelete(outbreak.id)} />
           ))}
           {outbreaks.length === 0 && (
-            <div className="flex items-center justify-center p-8 text-white/20 border border-dashed border-white/10 rounded-2xl text-center">
+            <div className="flex items-center justify-center p-8 text-white/20 border border-dashed border-white/10 rounded-2xl text-center uppercase text-[10px] font-black tracking-widest">
               Sin alertas registradas en el sistema
             </div>
           )}
@@ -61,22 +64,21 @@ export function RecentAlerts({ outbreaks, onSelect }: RecentAlertsProps) {
   );
 }
 
-function AlertCard({ outbreak, onClick }: { outbreak: Outbreak; onClick: () => void }) {
+function AlertCard({ outbreak, onClick, onDelete }: { outbreak: Outbreak; onClick: () => void; onDelete: () => void }) {
   const isHigh = outbreak.priority === 'High';
   const isMedium = outbreak.priority === 'Medium';
 
   return (
     <div 
-      onClick={onClick}
       className={cn(
-        "w-full p-5 rounded-2xl border transition-all duration-300 group cursor-pointer active:scale-95",
+        "w-full p-5 rounded-2xl border transition-all duration-300 group cursor-pointer relative",
         isHigh 
           ? "bg-red-500/5 border-red-500/10 hover:border-red-500/30 shadow-[0_4px_20px_rgba(239,68,68,0.05)]" 
           : isMedium ? "bg-orange-500/5 border-orange-500/10 hover:border-orange-500/30"
           : "bg-white/[0.03] border-white/5 hover:border-white/20"
       )}
     >
-      <div className="flex justify-between items-start mb-4">
+      <div onClick={onClick} className="flex justify-between items-start mb-4">
         <div className="space-y-1">
           <h4 className="text-sm font-bold text-white group-hover:text-[#22c55e] transition-colors truncate">
             {outbreak.diseaseName}
@@ -99,11 +101,24 @@ function AlertCard({ outbreak, onClick }: { outbreak: Outbreak; onClick: () => v
           <Clock size={10} />
           <span className="text-[10px]">{new Date(outbreak.reportedDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span>
         </div>
-        <div className="flex items-center gap-2">
-           <span className="text-[10px] font-bold text-white/40">Intensidad</span>
-           <span className={cn("text-xs font-bold", isHigh ? "text-red-400" : isMedium ? "text-orange-400" : "text-yellow-400")}>
-             {outbreak.intensityLevel || outbreak.intensity}%
-           </span>
+        <div className="flex items-center gap-4">
+           <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-white/40">Intensidad</span>
+              <span className={cn("text-xs font-bold", isHigh ? "text-red-400" : isMedium ? "text-orange-400" : "text-yellow-400")}>
+                {outbreak.intensityLevel || outbreak.intensity}%
+              </span>
+           </div>
+           <Button 
+             variant="ghost" 
+             size="icon" 
+             className="h-8 w-8 text-red-500/30 hover:text-red-500 hover:bg-red-500/10 transition-all"
+             onClick={(e) => {
+               e.stopPropagation();
+               onDelete();
+             }}
+           >
+             <Trash2 size={14} />
+           </Button>
         </div>
       </div>
     </div>
