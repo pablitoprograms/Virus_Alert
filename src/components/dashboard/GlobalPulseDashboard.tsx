@@ -87,16 +87,32 @@ const PROVINCIA_COORDINATES: Record<string, [number, number]> = {
 };
 
 const DISEASES_LIST = [
-  "Cólera", "COVID-19", "Dengue", "Difteria", "Ébola", "Fiebre Amarilla", 
-  "Gripe A (H1N1)", "Malaria", "Meningitis", "Mpox", "Peste", 
-  "Sarampión", "Tuberculosis", "Zika"
-].sort();
+  "Antrax", "Botulismo", "Brucelosis", "Chikungunya", "Cólera", "COVID-19", 
+  "Dengue", "Difteria", "Ébola", "Encefalitis Japonesa", "Fiebre Amarilla", 
+  "Fiebre de Lassa", "Fiebre de Marburgo", "Fiebre del Nilo Occidental", 
+  "Fiebre Hemorrágica de Crimea-Congo", "Fiebre Tifoidea", "Giardiasis", "Gonorrea", 
+  "Gripe A (H1N1)", "Gripe Aviar (H5N1)", "Hepatitis A", "Hepatitis B", "Hepatitis C", 
+  "Herpes Zóster", "Legionelosis", "Lepra", "Leptospirosis", "Listeriosis", 
+  "Malaria", "Meningitis Meningocócica", "Mpox (Viruela del Mono)", 
+  "Neumonía Neumocócica", "Peste Bubónica", "Polio", "Rabia", "Rubéola", 
+  "Salmonelosis", "Sarampión", "SARS", "Shigelosis", "Sífilis", "Tetanos", 
+  "Tos Ferina", "Toxoplasmosis", "Tuberculosis", "Tularemia", "Varicela", 
+  "VIH/SIDA", "Virus del Zika"
+].sort((a, b) => a.localeCompare(b, 'es'));
 
 const SYMPTOMS_LIST = [
-  "Fiebre", "Tos seca", "Erupciones", "Dificultad respiratoria", "Dolor articular", 
-  "Fatiga extrema", "Escalofríos", "Náuseas", "Cefalea intensa", 
-  "Pérdida de olfato/gusto", "Congestión nasal", "Dolor de garganta", "Mareos"
-];
+  "Anorexia", "Artralgia (Dolor articular)", "Cefalea (Dolor de cabeza)", 
+  "Cianosis (Coloración azulada)", "Congestión nasal", "Conjuntivitis", 
+  "Convulsiones", "Deshidratación", "Diarrea acuosa", "Diarrea con sangre", 
+  "Dificultad respiratoria (Disnea)", "Dolor abdominal", "Dolor de garganta", 
+  "Dolor lumbar", "Dolor muscular (Mialgia)", "Dolor torácico", 
+  "Erupciones cutáneas (Exantema)", "Escalofríos", "Estornudos", 
+  "Fatiga extrema (Astenia)", "Fiebre alta", "Hemorragias", 
+  "Ictericia (Piel amarillenta)", "Inflamación de ganglios (Linfadenopatía)", 
+  "Mareos", "Náuseas", "Parálisis", "Pérdida de olfato (Anosmia)", 
+  "Pérdida de gusto (Ageusia)", "Rigidez de nuca", "Sangrado de encías", 
+  "Sudoración nocturna", "Tos con sangre (Hemoptisis)", "Tos seca", "Vómitos"
+].sort((a, b) => a.localeCompare(b, 'es'));
 
 export default function GlobalPulseDashboard() {
   const [isPanelsHidden, setIsPanelsHidden] = useState(false);
