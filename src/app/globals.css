@@ -6,24 +6,24 @@
 
 @layer base {
   :root {
-    --background: 225 9% 8%;
+    --background: 0 0% 0%;
     --foreground: 210 20% 98%;
-    --card: 225 9% 10%;
+    --card: 0 0% 2%;
     --card-foreground: 210 20% 98%;
-    --popover: 225 9% 8%;
+    --popover: 0 0% 0%;
     --popover-foreground: 210 20% 98%;
     --primary: 142 71% 45%;
-    --primary-foreground: 225 9% 8%;
-    --secondary: 225 9% 15%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 8%;
     --secondary-foreground: 210 20% 98%;
-    --muted: 225 9% 15%;
+    --muted: 0 0% 8%;
     --muted-foreground: 215 20% 65%;
     --accent: 142 76% 55%;
-    --accent-foreground: 225 9% 8%;
+    --accent-foreground: 0 0% 0%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 20% 98%;
-    --border: 225 9% 18%;
-    --input: 225 9% 18%;
+    --border: 0 0% 12%;
+    --input: 0 0% 12%;
     --ring: 142 76% 55%;
     --radius: 0.75rem;
     --chart-1: 142 76% 55%;
@@ -46,7 +46,7 @@
 
 /* Leaflet Overrides */
 .leaflet-container {
-  background: #060608 !important;
+  background: #000000 !important;
   width: 100%;
   height: 100%;
 }
@@ -57,14 +57,14 @@
 }
 
 .leaflet-control-zoom-in, .leaflet-control-zoom-out {
-  background-color: #1e2025 !important;
+  background-color: #0c0d0f !important;
   color: #22c55e !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: 8px !important;
   margin-bottom: 4px !important;
 }
 
-/* Marcadores de Neón - Resplandor Intenso y Estático */
+/* Marcadores de Neón */
 .marker-glow-high {
   filter: drop-shadow(0 0 12px rgba(239, 68, 68, 1)) drop-shadow(0 0 4px rgba(239, 68, 68, 0.8));
   animation: glow-pulse 2s infinite ease-in-out;
@@ -83,14 +83,12 @@
   50% { filter: drop-shadow(0 0 25px rgba(239, 68, 68, 1)) drop-shadow(0 0 10px rgba(239, 68, 68, 1)); }
 }
 
-/* Deshabilitar transiciones de Leaflet para evitar sensación de movimiento */
 .no-transition {
   transition: none !important;
 }
 
-/* Estilo para los Popups de Leaflet en modo oscuro */
 .leaflet-popup-content-wrapper {
-  background: #0c0d0f !important;
+  background: #000000 !important;
   color: white !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: 12px !important;
@@ -98,7 +96,7 @@
 }
 
 .leaflet-popup-tip {
-  background: #0c0d0f !important;
+  background: #000000 !important;
 }
 
 /* Custom scrollbar */

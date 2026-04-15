@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState, useTransition } from 'react';
+import React, { useState, useTransition, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { 
   LayoutDashboard, 
@@ -20,7 +19,10 @@ import {
   ShieldAlert,
   Loader2,
   Navigation,
-  Trash2
+  Trash2,
+  ChevronRight,
+  ChevronLeft,
+  CheckCircle2
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -29,16 +31,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useAuth, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { collection, query, orderBy, limit, doc } from "firebase/firestore";
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
-// Importación dinámica para evitar errores de SSR con Leaflet
 const WorldMap = dynamic(() => import('./WorldMap').then((mod) => mod.WorldMap), {
   ssr: false,
-  loading: () => <div className="w-full h-full bg-[#060608] flex items-center justify-center text-white/20 text-xs font-black uppercase tracking-[0.4em]">Cargando red satelital...</div>
+  loading: () => <div className="w-full h-full bg-[#000000] flex items-center justify-center text-white/20 text-xs font-black uppercase tracking-[0.4em]">Cargando red satelital...</div>
 });
 
 const OutbreakHeatmap = dynamic(() => import('./OutbreakHeatmap').then((mod) => mod.OutbreakHeatmap), {
@@ -84,15 +86,16 @@ const PROVINCIA_COORDINATES: Record<string, [number, number]> = {
   "Logroño": [42.4627, -2.4450]
 };
 
-const TIPOS_ENFERMEDAD = [
-  "COVID-1.0", "Gripe A (H1N1)", "Bronquitis Aguda", "Neumonía Atípica", 
-  "Gastroenteritis Viral", "Dengue Hemorrágico", "Zika Virus", 
-  "Sarampión", "Malaria Falciparum", "Cólera", "Viruela del Mono", 
-  "Fiebre del Nilo Occidental"
+const DISEASES_LIST = [
+  "Cólera", "COVID-19", "Dengue", "Difteria", "Ébola", "Fiebre Amarilla", 
+  "Gripe A (H1N1)", "Malaria", "Meningitis", "Mpox", "Peste", 
+  "Sarampión", "Tuberculosis", "Zika"
 ].sort();
 
 const SYMPTOMS_LIST = [
-  "Fiebre", "Tos Seca", "Erupciones", "Dificultad Respiratoria", "Dolor Articular", "Fatiga Extrema"
+  "Fiebre", "Tos seca", "Erupciones", "Dificultad respiratoria", "Dolor articular", 
+  "Fatiga extrema", "Escalofríos", "Náuseas", "Cefalea intensa", 
+  "Pérdida de olfato/gusto", "Congestión nasal", "Dolor de garganta", "Mareos"
 ];
 
 export default function GlobalPulseDashboard() {
@@ -105,19 +108,20 @@ export default function GlobalPulseDashboard() {
   const auth = useAuth();
   const db = useFirestore();
 
+  // Wizard state
+  const [wizardStep, setWizardStep] = useState(1);
+  const [reportDescription, setReportDescription] = useState("");
+  const [selectedDisease, setSelectedDisease] = useState("");
+  const [selectedProvince, setSelectedProvince] = useState("");
+  const [selectedPriority, setSelectedPriority] = useState<PriorityLevel | null>(null);
+  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
+  const [isLocating, setIsLocating] = useState(false);
+
   // Firestore Data
   const outbreaksQuery = useMemoFirebase(() => {
     return query(collection(db, 'outbreaks'), orderBy('reportedDate', 'desc'), limit(50));
   }, [db]);
   const { data: outbreaks } = useCollection(outbreaksQuery);
-
-  // Form states
-  const [reportDescription, setReportDescription] = useState("");
-  const [selectedDisease, setSelectedDisease] = useState("");
-  const [selectedProvince, setSelectedProvince] = useState("");
-  const [selectedPriority, setSelectedPriority] = useState<PriorityLevel>('Low');
-  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
-  const [isLocating, setIsLocating] = useState(false);
 
   const activeClustersCount = outbreaks?.length || 0;
   const highPriorityCount = outbreaks?.filter(c => c.priority === 'High').length || 0;
@@ -125,30 +129,19 @@ export default function GlobalPulseDashboard() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      toast({
-        title: "Sesión Cerrada",
-        description: "Has salido de la terminal VirusAlert correctamente.",
-      });
+      toast({ title: "Sesión Cerrada", description: "Has salido de la terminal VirusAlert correctamente." });
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "No se pudo cerrar la sesión.",
-      });
+      toast({ variant: "destructive", title: "Error", description: "No se pudo cerrar la sesión." });
     }
   };
 
   const handleDeleteOutbreak = (id: string) => {
     if (!id) return;
-    
     startTransition(() => {
       const docRef = doc(db, 'outbreaks', id);
       deleteDocumentNonBlocking(docRef);
       setSelectedOutbreak(null);
-      toast({
-        title: "Registro Eliminado",
-        description: "El informe ha sido borrado permanentemente de la red VirusAlert.",
-      });
+      toast({ title: "Registro Eliminado", description: "El informe ha sido borrado de la red." });
     });
   };
 
@@ -163,7 +156,6 @@ export default function GlobalPulseDashboard() {
       toast({ variant: "destructive", title: "No disponible", description: "Tu navegador no soporta geolocalización." });
       return;
     }
-
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -190,11 +182,7 @@ export default function GlobalPulseDashboard() {
 
   const handleReportSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!selectedProvince || !selectedDisease) {
-      toast({ variant: "destructive", title: "Datos incompletos", description: "Por favor, selecciona una provincia y un tipo de enfermedad." });
-      return;
-    }
+    if (!selectedProvince || !selectedDisease || !selectedPriority) return;
 
     startTransition(() => {
       const coords = PROVINCIA_COORDINATES[selectedProvince];
@@ -215,11 +203,12 @@ export default function GlobalPulseDashboard() {
 
       addDocumentNonBlocking(collection(db, 'outbreaks'), newOutbreak);
 
-      // Limpiar formulario y volver al panel
+      // Reset
+      setWizardStep(1);
       setReportDescription("");
       setSelectedDisease("");
       setSelectedProvince("");
-      setSelectedPriority('Low');
+      setSelectedPriority(null);
       setSelectedSymptoms([]);
       setCurrentView('dashboard');
 
@@ -230,268 +219,284 @@ export default function GlobalPulseDashboard() {
     });
   };
 
+  const isStepValid = () => {
+    switch (wizardStep) {
+      case 1: return !!selectedPriority;
+      case 2: return !!selectedDisease;
+      case 3: return selectedSymptoms.length > 0;
+      case 4: return !!selectedProvince && reportDescription.length > 10;
+      default: return false;
+    }
+  };
+
   return (
-    <div className="relative h-screen w-screen flex bg-[#060608] text-white overflow-hidden font-body">
+    <div className="relative h-screen w-screen flex bg-[#000000] text-white overflow-hidden font-body">
       
-      {/* Botón Flotante para Mostrar Paneles */}
+      {/* Sidebar Overlay Trigger */}
       {isPanelsHidden && (
         <Button
           variant="secondary"
           size="icon"
           onClick={() => setIsPanelsHidden(false)}
-          className="absolute top-6 left-6 z-50 bg-[#1e2025]/80 backdrop-blur-md border border-white/10 hover:bg-[#252830] transition-all shadow-2xl rounded-full"
-          title="Mostrar Paneles"
+          className="absolute top-6 left-6 z-50 bg-[#0c0d0f]/80 backdrop-blur-md border border-white/10 hover:bg-[#1a1b1e] transition-all shadow-2xl rounded-full"
         >
           <Menu size={20} className="text-[#22c55e]" />
         </Button>
       )}
 
-      {/* Barra Lateral Principal */}
-      <aside 
-        className={cn(
-          "relative z-40 flex flex-col bg-[#0c0d0f] border-r border-white/5 transition-all duration-500 ease-in-out shadow-2xl",
-          isPanelsHidden ? "w-0 -translate-x-full opacity-0 overflow-hidden" : "w-72 translate-x-0 opacity-100"
-        )}
-      >
+      {/* Main Sidebar */}
+      <aside className={cn(
+        "relative z-40 flex flex-col bg-[#000000] border-r border-white/5 transition-all duration-500 ease-in-out shadow-2xl",
+        isPanelsHidden ? "w-0 -translate-x-full opacity-0 overflow-hidden" : "w-72 translate-x-0 opacity-100"
+      )}>
         <div className="p-8 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#166534] to-[#22c55e] flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.3)]">
             <Globe className="text-[#0a0a0c]" size={22} />
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">VirusAlert</h1>
-            <p className="text-[9px] font-bold text-[#22c55e] uppercase tracking-widest">Nodos España Activos</p>
+            <p className="text-[9px] font-bold text-[#22c55e] uppercase tracking-widest">Sistemas España</p>
           </div>
         </div>
 
-        <div className="px-4 mb-6">
-          <Button 
-            variant="ghost" 
-            onClick={() => setIsPanelsHidden(true)}
-            className="w-full justify-start gap-3 text-xs font-bold uppercase tracking-wider text-white/50 hover:text-white hover:bg-white/5 py-6 rounded-xl"
-          >
-            <PanelLeftClose size={18} />
-            Esconder Paneles
-          </Button>
-        </div>
-
         <nav className="flex-1 px-4 space-y-2">
-          <NavItem 
-            icon={<LayoutDashboard size={20} />} 
-            label="Alertas Recientes" 
-            active={currentView === 'dashboard'} 
-            onClick={() => setCurrentView('dashboard')}
-          />
-          <NavItem 
-            icon={<Globe size={20} />} 
-            label="Mapa Táctico" 
-            active={currentView === 'map'} 
-            onClick={() => setCurrentView('map')}
-          />
-          <NavItem 
-            icon={<FileText size={20} />} 
-            label="Informes" 
-            active={currentView === 'reports'} 
-            onClick={() => setCurrentView('reports')}
-          />
+          <NavItem icon={<LayoutDashboard size={20} />} label="Alertas Recientes" active={currentView === 'dashboard'} onClick={() => setCurrentView('dashboard')} />
+          <NavItem icon={<Globe size={20} />} label="Mapa Táctico" active={currentView === 'map'} onClick={() => setCurrentView('map')} />
+          <NavItem icon={<FileText size={20} />} label="Informes" active={currentView === 'reports'} onClick={() => { setCurrentView('reports'); setWizardStep(1); }} />
         </nav>
 
-        {/* Perfil de Usuario y Logout */}
         <div className="p-4 border-t border-white/5 space-y-4">
           <div className="bg-white/[0.02] rounded-2xl p-4 flex items-center gap-3 border border-white/5">
             <div className="w-10 h-10 rounded-full bg-white/[0.05] flex items-center justify-center border border-white/10 shrink-0">
               <UserCircle size={24} className="text-white/40" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-black uppercase text-white/30 tracking-widest leading-none mb-1">Operador Autenticado</p>
-              <p className="text-xs font-bold text-white/70 truncate">{user?.isAnonymous ? 'Invitado Temporal' : user?.email}</p>
+              <p className="text-[10px] font-black uppercase text-white/30 tracking-widest leading-none mb-1">Operador</p>
+              <p className="text-xs font-bold text-white/70 truncate">{user?.email}</p>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            onClick={handleLogout}
-            className="w-full justify-start gap-3 text-red-500 hover:text-red-400 hover:bg-red-500/5 rounded-xl py-6"
-          >
+          <Button variant="ghost" onClick={handleLogout} className="w-full justify-start gap-3 text-red-500 hover:text-red-400 hover:bg-red-500/5 rounded-xl py-6">
             <LogOut size={18} />
             <span className="text-[11px] font-black tracking-widest uppercase">Cerrar Sesión</span>
           </Button>
         </div>
 
         <div className="p-6 border-t border-white/5">
-          <div className="bg-[#1e2025]/40 rounded-2xl p-4 space-y-4 border border-white/5">
-            <div className="flex items-center justify-between text-[10px] font-bold text-white/40 uppercase tracking-widest">
-              <span>Estado Península</span>
-              <Activity size={12} className="text-[#22c55e]" />
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs">
-                <span className="text-white/60">Focos Activos</span>
-                <span className="font-bold text-[#22c55e]">{activeClustersCount}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span className="text-white/60">Emergencias</span>
-                <span className="font-bold text-red-500">{highPriorityCount}</span>
-              </div>
-            </div>
-          </div>
+          <Button variant="ghost" onClick={() => setIsPanelsHidden(true)} className="w-full justify-start gap-3 text-xs font-bold uppercase tracking-wider text-white/40 hover:text-white py-6 rounded-xl">
+            <PanelLeftClose size={18} /> Ocultar Paneles
+          </Button>
         </div>
       </aside>
 
-      {/* Contenido Principal */}
-      <main className="flex-1 relative flex flex-row min-w-0">
+      {/* Content Area */}
+      <main className="flex-1 relative flex flex-row min-w-0 bg-[#000000]">
         
-        {/* Área del Contenido Variable */}
-        <div className="flex-1 relative overflow-hidden bg-[#060608]">
-          <header className="absolute top-0 left-0 w-full z-20 px-8 py-8 flex justify-between items-start pointer-events-none">
-            <div className="pointer-events-auto">
-              <h2 className="text-xs font-black text-white/30 uppercase tracking-[0.4em] mb-1">Vigilancia Nacional</h2>
-              <p className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">
-                {currentView === 'dashboard' ? 'Alertas Críticas España' : 
-                 currentView === 'map' ? 'Mapa Táctico de Calor' : 'Central de Informes Médicos'}
-              </p>
-            </div>
-          </header>
+        <header className="absolute top-0 left-0 w-full z-20 px-8 py-8 flex justify-between items-start pointer-events-none">
+          <div className="pointer-events-auto">
+            <h2 className="text-xs font-black text-white/30 uppercase tracking-[0.4em] mb-1">Vigilancia Nacional</h2>
+            <p className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">
+              {currentView === 'dashboard' ? 'Alertas Críticas' : 
+               currentView === 'map' ? 'Mapa Táctico' : 'Asistente de Informes'}
+            </p>
+          </div>
+        </header>
 
-          <div className="w-full h-full relative">
-            {currentView === 'dashboard' ? (
-              <div className="absolute inset-0 bg-[#060608] p-8 pt-36 overflow-hidden z-10 flex justify-center items-start">
-                <div className="w-full max-w-4xl h-[calc(100vh-250px)] bg-[#0c0d0f]/50 border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
-                  <RecentAlerts outbreaks={outbreaks || []} onSelect={(alert) => setSelectedOutbreak(alert)} onDelete={handleDeleteOutbreak} />
-                </div>
+        <div className="w-full h-full relative">
+          {currentView === 'dashboard' ? (
+            <div className="absolute inset-0 p-8 pt-36 overflow-hidden z-10 flex justify-center items-start">
+              <div className="w-full max-w-4xl h-[calc(100vh-250px)] bg-[#0c0d0f]/50 border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
+                <RecentAlerts outbreaks={outbreaks || []} onSelect={(alert) => setSelectedOutbreak(alert)} onDelete={handleDeleteOutbreak} />
               </div>
-            ) : currentView === 'reports' ? (
-              <div className="absolute inset-0 bg-[#060608] p-8 pt-36 overflow-auto z-10 flex justify-center items-start pb-20">
-                <div className="w-full max-w-3xl bg-[#0c0d0f] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.5)]">
-                  <div className="p-10 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
-                    <h3 className="text-2xl font-bold flex items-center gap-4">
-                      <FileText className="text-[#22c55e]" size={28} />
-                      Nuevo Informe de Incidencia
-                    </h3>
+            </div>
+          ) : currentView === 'reports' ? (
+            <div className="absolute inset-0 p-8 pt-36 overflow-auto z-10 flex flex-col items-center pb-20">
+              <div className="w-full max-w-2xl bg-[#0c0d0f] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl relative">
+                
+                {/* Progress Bar */}
+                <div className="px-10 pt-10 space-y-4">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[10px] font-black text-[#22c55e] uppercase tracking-widest">Paso {wizardStep} de 4</span>
+                    <span className="text-[10px] font-bold text-white/20 uppercase">{Math.round((wizardStep/4)*100)}% Completado</span>
                   </div>
-                  <form onSubmit={handleReportSubmit} className="p-10 space-y-8">
-                    {/* Selector de Gravedad */}
-                    <div className="space-y-4">
-                      <Label className="text-xs font-black uppercase tracking-widest text-white/40">Nivel de Gravedad</Label>
-                      <div className="grid grid-cols-3 gap-4">
-                        <Button 
-                          type="button" 
-                          variant={selectedPriority === 'Low' ? 'default' : 'outline'}
-                          onClick={() => setSelectedPriority('Low')}
-                          className={cn("h-16 rounded-2xl font-bold uppercase text-[10px] tracking-widest", 
-                            selectedPriority === 'Low' ? "bg-yellow-500 hover:bg-yellow-600 text-black" : "border-yellow-500/20 text-yellow-500")}
-                        >Vigilancia</Button>
-                        <Button 
-                          type="button" 
-                          variant={selectedPriority === 'Medium' ? 'default' : 'outline'}
-                          onClick={() => setSelectedPriority('Medium')}
-                          className={cn("h-16 rounded-2xl font-bold uppercase text-[10px] tracking-widest", 
-                            selectedPriority === 'Medium' ? "bg-orange-500 hover:bg-orange-600 text-black" : "border-orange-500/20 text-orange-500")}
-                        >Alerta</Button>
-                        <Button 
-                          type="button" 
-                          variant={selectedPriority === 'High' ? 'default' : 'outline'}
-                          onClick={() => setSelectedPriority('High')}
-                          className={cn("h-16 rounded-2xl font-bold uppercase text-[10px] tracking-widest", 
-                            selectedPriority === 'High' ? "bg-red-600 hover:bg-red-700 text-white shadow-[0_0_20px_rgba(220,38,38,0.4)]" : "border-red-600/20 text-red-600")}
-                        >Emergencia</Button>
+                  <Progress value={(wizardStep / 4) * 100} className="h-1.5 bg-white/5" />
+                </div>
+
+                <div className="p-10">
+                  <form onSubmit={handleReportSubmit} className="space-y-8">
+                    
+                    {/* STEP 1: RISK LEVEL */}
+                    {wizardStep === 1 && (
+                      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="space-y-1">
+                          <h3 className="text-2xl font-bold">Nivel de Riesgo</h3>
+                          <p className="text-sm text-white/40">Determine la gravedad de la incidencia detectada.</p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4">
+                          <RiskButton 
+                            active={selectedPriority === 'Low'} 
+                            color="yellow" 
+                            label="Vigilancia" 
+                            desc="Situación estable, monitorización rutinaria." 
+                            onClick={() => setSelectedPriority('Low')} 
+                          />
+                          <RiskButton 
+                            active={selectedPriority === 'Medium'} 
+                            color="orange" 
+                            label="Alerta" 
+                            desc="Posible foco infeccioso en expansión." 
+                            onClick={() => setSelectedPriority('Medium')} 
+                          />
+                          <RiskButton 
+                            active={selectedPriority === 'High'} 
+                            color="red" 
+                            label="Emergencia" 
+                            desc="Protocolo crítico, intervención inmediata." 
+                            onClick={() => setSelectedPriority('High')} 
+                          />
+                        </div>
                       </div>
-                    </div>
+                    )}
 
-                    <div className="space-y-4">
-                      <Label className="text-xs font-black uppercase tracking-widest text-white/40">Descripción del Problema Médico</Label>
-                      <Textarea 
-                        placeholder="Describa los síntomas observados, duración y gravedad detectada..." 
-                        className="min-h-[120px] bg-white/[0.03] border-white/10 rounded-2xl focus:ring-[#22c55e] text-base p-6"
-                        required
-                        value={reportDescription}
-                        onChange={(e) => setReportDescription(e.target.value)}
-                      />
-                    </div>
-
-                    {/* Selector de Síntomas */}
-                    <div className="space-y-4">
-                      <Label className="text-xs font-black uppercase tracking-widest text-white/40">Sintomatología Detectada</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {SYMPTOMS_LIST.map(s => (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => toggleSymptom(s)}
-                            className={cn(
-                              "px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border",
-                              selectedSymptoms.includes(s) 
-                                ? "bg-[#22c55e] border-[#22c55e] text-black" 
-                                : "bg-white/5 border-white/10 text-white/40 hover:border-white/30"
-                            )}
-                          >{s}</button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="space-y-4">
-                        <Label className="text-xs font-black uppercase tracking-widest text-white/40">Tipo de Enfermedad</Label>
-                        <Select required value={selectedDisease} onValueChange={setSelectedDisease}>
-                          <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl">
-                            <SelectValue placeholder="Seleccionar patógeno..." />
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#1e2025] border-white/10 text-white">
-                            {TIPOS_ENFERMEDAD.map(tipo => (
-                              <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-4">
-                        <Label className="text-xs font-black uppercase tracking-widest text-white/40">Ubicación (Provincia)</Label>
-                        <div className="flex gap-2">
-                          <Select required value={selectedProvince} onValueChange={setSelectedProvince}>
-                            <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl flex-1">
-                              <SelectValue placeholder="Seleccionar..." />
+                    {/* STEP 2: PATHOGEN */}
+                    {wizardStep === 2 && (
+                      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="space-y-1">
+                          <h3 className="text-2xl font-bold">Patógeno Identificado</h3>
+                          <p className="text-sm text-white/40">Seleccione el tipo de enfermedad según estándares OMS.</p>
+                        </div>
+                        <div className="space-y-4">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-white/30">Lista de Enfermedades</Label>
+                          <Select value={selectedDisease} onValueChange={setSelectedDisease}>
+                            <SelectTrigger className="h-16 bg-white/[0.03] border-white/10 rounded-2xl text-lg font-medium">
+                              <SelectValue placeholder="Seleccionar patógeno..." />
                             </SelectTrigger>
-                            <SelectContent className="bg-[#1e2025] border-white/10 text-white">
-                              {Object.keys(PROVINCIA_COORDINATES).sort().map(prov => (
-                                <SelectItem key={prov} value={prov}>{prov}</SelectItem>
+                            <SelectContent className="bg-[#0c0d0f] border-white/10 text-white max-h-[300px]">
+                              {DISEASES_LIST.map(d => (
+                                <SelectItem key={d} value={d} className="py-3 focus:bg-[#22c55e]/10">{d}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            size="icon" 
-                            onClick={handleAutodetectLocation}
-                            disabled={isLocating}
-                            className="h-14 w-14 rounded-2xl border-white/10 bg-white/5 hover:bg-white/10"
-                            title="Autodetectar Ubicación"
-                          >
-                            {isLocating ? <Loader2 className="animate-spin text-[#22c55e]" /> : <Navigation size={20} className="text-[#22c55e]" />}
-                          </Button>
                         </div>
                       </div>
-                    </div>
+                    )}
 
-                    <Button 
-                      type="submit"
-                      disabled={isPending}
-                      className="w-full h-16 bg-[#22c55e] hover:bg-[#22c55e]/90 text-[#0a0a0c] font-black uppercase tracking-[0.2em] rounded-2xl text-xs shadow-[0_0_20px_rgba(34,197,94,0.3)] disabled:opacity-50"
-                    >
-                      {isPending ? <Loader2 className="animate-spin mr-2" /> : <Send size={18} className="mr-2" />}
-                      Emitir Informe Crítico
-                    </Button>
+                    {/* STEP 3: SYMPTOMS */}
+                    {wizardStep === 3 && (
+                      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="space-y-1">
+                          <h3 className="text-2xl font-bold">Sintomatología</h3>
+                          <p className="text-sm text-white/40">Marque los síntomas detectados en el foco.</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {SYMPTOMS_LIST.map(s => (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={() => toggleSymptom(s)}
+                              className={cn(
+                                "px-4 py-2.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border",
+                                selectedSymptoms.includes(s) 
+                                  ? "bg-[#22c55e] border-[#22c55e] text-black shadow-[0_0_15px_rgba(34,197,94,0.3)]" 
+                                  : "bg-white/5 border-white/10 text-white/40 hover:border-white/30"
+                              )}
+                            >{s}</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* STEP 4: LOCATION / SUBMIT */}
+                    {wizardStep === 4 && (
+                      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="space-y-1">
+                          <h3 className="text-2xl font-bold">Ubicación y Detalles</h3>
+                          <p className="text-sm text-white/40">Finalice el informe con la localización exacta.</p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-6">
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-white/30">Provincia de Origen</Label>
+                            <div className="flex gap-3">
+                              <Select value={selectedProvince} onValueChange={setSelectedProvince}>
+                                <SelectTrigger className="h-14 bg-white/[0.03] border-white/10 rounded-2xl flex-1">
+                                  <SelectValue placeholder="Seleccionar..." />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#0c0d0f] border-white/10 text-white">
+                                  {Object.keys(PROVINCIA_COORDINATES).sort().map(p => (
+                                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                onClick={handleAutodetectLocation}
+                                disabled={isLocating}
+                                className="h-14 w-14 rounded-2xl border-white/10 bg-white/5 hover:bg-[#22c55e]/10"
+                              >
+                                {isLocating ? <Loader2 className="animate-spin text-[#22c55e]" /> : <Navigation size={20} className="text-[#22c55e]" />}
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="space-y-3">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-white/30">Descripción Clínica</Label>
+                            <Textarea 
+                              placeholder="Mínimo 10 caracteres para validar..." 
+                              className="min-h-[120px] bg-white/[0.03] border-white/10 rounded-2xl p-4 resize-none"
+                              value={reportDescription}
+                              onChange={(e) => setReportDescription(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Navigation Buttons */}
+                    <div className="flex gap-4 pt-4">
+                      {wizardStep > 1 && (
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          onClick={() => setWizardStep(prev => prev - 1)}
+                          className="h-14 flex-1 text-white/40 hover:text-white hover:bg-white/5 rounded-2xl font-bold uppercase tracking-widest text-[10px]"
+                        >
+                          <ChevronLeft size={16} className="mr-2" /> Anterior
+                        </Button>
+                      )}
+                      
+                      {wizardStep < 4 ? (
+                        <Button 
+                          type="button" 
+                          disabled={!isStepValid()}
+                          onClick={() => setWizardStep(prev => prev + 1)}
+                          className="h-14 flex-[2] bg-[#22c55e] hover:bg-[#22c55e]/90 text-black rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-[0_0_20px_rgba(34,197,94,0.2)]"
+                        >
+                          Siguiente <ChevronRight size={16} className="ml-2" />
+                        </Button>
+                      ) : (
+                        <Button 
+                          type="submit"
+                          disabled={!isStepValid() || isPending}
+                          className="h-14 flex-[2] bg-[#22c55e] hover:bg-[#22c55e]/90 text-black rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-[0_0_20px_rgba(34,197,94,0.3)]"
+                        >
+                          {isPending ? <Loader2 className="animate-spin mr-2" /> : <Send size={16} className="mr-2" />}
+                          Emitir Informe Crítico
+                        </Button>
+                      )}
+                    </div>
                   </form>
                 </div>
               </div>
-            ) : (
-              <WorldMap>
-                <OutbreakHeatmap data={outbreaks ? { outbreakClusters: outbreaks } : null} onSelectCluster={(cluster) => setSelectedOutbreak(cluster)} />
-              </WorldMap>
-            )}
-          </div>
+            </div>
+          ) : (
+            <WorldMap>
+              <OutbreakHeatmap data={outbreaks ? { outbreakClusters: outbreaks } : null} onSelectCluster={(cluster) => setSelectedOutbreak(cluster)} />
+            </WorldMap>
+          )}
         </div>
 
-        {/* Diálogo de Detalles de Brote */}
+        {/* Outbreak Detail Dialog */}
         <Dialog open={!!selectedOutbreak} onOpenChange={() => setSelectedOutbreak(null)}>
-          <DialogContent className="bg-[#0c0d0f] border-white/10 text-white max-w-lg rounded-[2.5rem] overflow-hidden p-0 shadow-[0_48px_96px_rgba(0,0,0,0.8)] border-white/5">
+          <DialogContent className="bg-[#000000] border-white/10 text-white max-w-lg rounded-[2.5rem] overflow-hidden p-0 shadow-2xl">
             {selectedOutbreak && (
               <div className="flex flex-col">
                 <div className={cn(
@@ -501,12 +506,11 @@ export default function GlobalPulseDashboard() {
                   <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12">
                      <ShieldAlert size={120} />
                   </div>
-                  
                   <Badge className={cn(
                     "w-fit mb-4 uppercase font-black tracking-[0.2em] px-4 py-1.5 rounded-lg text-[9px]",
-                    selectedOutbreak.priority === 'High' ? "bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.4)]" : "bg-orange-500 shadow-[0_0_20px_rgba(249,115,22,0.4)]"
+                    selectedOutbreak.priority === 'High' ? "bg-red-600" : "bg-orange-500"
                   )}>
-                    {selectedOutbreak.priority === 'High' ? 'Nivel Crítico' : 'Alerta de Vigilancia'}
+                    {selectedOutbreak.priority === 'High' ? 'Nivel Crítico' : 'Alerta'}
                   </Badge>
                   <DialogTitle className="text-4xl font-black tracking-tighter leading-none">{selectedOutbreak.diseaseName}</DialogTitle>
                   <p className="text-white/40 text-xs mt-2 uppercase font-bold tracking-widest flex items-center gap-2">
@@ -516,35 +520,18 @@ export default function GlobalPulseDashboard() {
                 
                 <div className="p-10 space-y-8">
                   <div className="grid grid-cols-2 gap-8">
-                    <InfoItem icon={<Activity size={18} className="text-[#22c55e]" />} label="Estado Operativo" value={selectedOutbreak.status} />
-                    <InfoItem icon={<Calendar size={18} className="text-[#22c55e]" />} label="Fecha de Registro" value={new Date(selectedOutbreak.reportedDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} />
-                    <InfoItem icon={<AlertCircle size={18} className="text-[#22c55e]" />} label="Índice de Intensidad" value={`${selectedOutbreak.intensityLevel || selectedOutbreak.intensity}%`} />
-                    <InfoItem icon={<ShieldAlert size={18} className="text-[#22c55e]" />} label="Categoría" value={selectedOutbreak.category} />
+                    <InfoItem icon={<Activity size={18} className="text-[#22c55e]" />} label="Estado" value={selectedOutbreak.status} />
+                    <InfoItem icon={<Calendar size={18} className="text-[#22c55e]" />} label="Registro" value={new Date(selectedOutbreak.reportedDate).toLocaleDateString()} />
                   </div>
-
-                  <div className="p-6 bg-white/[0.03] rounded-3xl border border-white/5 relative group transition-all hover:bg-white/[0.05]">
-                    <h4 className="text-[10px] font-black text-[#22c55e] uppercase tracking-[0.3em] mb-3 flex items-center gap-2">
-                      <Info size={14} /> Análisis VirusAlert España
-                    </h4>
-                    <p className="text-sm text-white/60 leading-relaxed font-medium">
-                      {selectedOutbreak.description || `Los protocolos de vigilancia en ${selectedOutbreak.locationDescription} muestran una intensidad crítica. Se recomienda activar protocolos regionales fase 2 de contención biológica.`}
-                    </p>
+                  <div className="p-6 bg-white/[0.03] rounded-3xl border border-white/5">
+                    <h4 className="text-[10px] font-black text-[#22c55e] uppercase tracking-[0.3em] mb-3">Análisis Clínico</h4>
+                    <p className="text-sm text-white/60 leading-relaxed">{selectedOutbreak.description || "Sin descripción adicional."}</p>
                   </div>
-
                   <div className="flex gap-4">
-                    <Button 
-                      variant="ghost"
-                      className="flex-1 text-red-500 hover:text-red-400 hover:bg-red-500/10 font-black uppercase tracking-widest h-14 rounded-2xl text-[10px]"
-                      onClick={() => handleDeleteOutbreak(selectedOutbreak.id)}
-                    >
-                      <Trash2 size={16} className="mr-2" /> Eliminar
+                    <Button variant="ghost" className="flex-1 text-red-500 hover:text-red-400 font-black uppercase tracking-widest h-14 rounded-2xl text-[10px]" onClick={() => handleDeleteOutbreak(selectedOutbreak.id)}>
+                      <Trash2 size={16} className="mr-2" /> Borrar
                     </Button>
-                    <Button 
-                      className="flex-[2] bg-[#22c55e] hover:bg-[#22c55e]/90 text-[#0a0a0c] font-black uppercase tracking-widest h-14 rounded-2xl text-[10px] shadow-[0_0_20px_rgba(34,197,94,0.3)]"
-                      onClick={() => setSelectedOutbreak(null)}
-                    >
-                      Archivar Protocolo
-                    </Button>
+                    <Button className="flex-[2] bg-[#22c55e] text-black font-black uppercase tracking-widest h-14 rounded-2xl text-[10px]" onClick={() => setSelectedOutbreak(null)}>Cerrar</Button>
                   </div>
                 </div>
               </div>
@@ -552,18 +539,17 @@ export default function GlobalPulseDashboard() {
           </DialogContent>
         </Dialog>
 
-        {/* Overlay de Carga Principal */}
         {isPending && (
-          <div className="absolute inset-0 z-50 bg-[#060608]/80 backdrop-blur-2xl flex items-center justify-center">
-            <div className="flex flex-col items-center gap-8">
+          <div className="absolute inset-0 z-50 bg-[#000000]/80 backdrop-blur-2xl flex items-center justify-center">
+            <div className="flex flex-col items-center gap-8 text-center">
               <div className="relative w-24 h-24">
                 <div className="absolute inset-0 border-[3px] border-[#22c55e]/10 rounded-full" />
                 <div className="absolute inset-0 border-t-[3px] border-[#22c55e] rounded-full animate-spin shadow-[0_0_20px_rgba(34,197,94,0.4)]" />
                 <Globe className="absolute inset-0 m-auto text-[#22c55e]/50 animate-pulse" size={32} />
               </div>
-              <div className="flex flex-col items-center gap-2">
-                <span className="text-[11px] font-black text-[#22c55e] uppercase tracking-[0.6em] animate-pulse">Sincronizando con la red</span>
-                <span className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em]">Actualizando coordenadas nacionales...</span>
+              <div className="space-y-2">
+                <span className="text-[11px] font-black text-[#22c55e] uppercase tracking-[0.6em] block animate-pulse">Transmitiendo datos cifrados</span>
+                <span className="text-[9px] font-bold text-white/20 uppercase tracking-[0.2em] block">Protocolo de seguridad activo</span>
               </div>
             </div>
           </div>
@@ -575,32 +561,43 @@ export default function GlobalPulseDashboard() {
 
 function NavItem({ icon, label, active = false, onClick }: { icon: React.ReactNode, label: string, active?: boolean, onClick: () => void }) {
   return (
+    <button onClick={onClick} className={cn(
+      "w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group relative",
+      active ? "bg-[#22c55e]/10 text-[#22c55e] shadow-[inset_0_0_20px_rgba(34,197,94,0.05)]" : "text-white/30 hover:text-white hover:bg-white/5"
+    )}>
+      <span className={cn("transition-transform group-hover:scale-110", active ? "text-[#22c55e] drop-shadow-[0_0_8px_#22c55e]" : "text-white/20")}>{icon}</span>
+      <span className={cn("text-[11px] font-black tracking-widest uppercase", active ? "text-[#22c55e]" : "")}>{label}</span>
+      {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#22c55e] shadow-[0_0_12px_#22c55e]" />}
+    </button>
+  );
+}
+
+function RiskButton({ active, color, label, desc, onClick }: { active: boolean, color: 'red' | 'orange' | 'yellow', label: string, desc: string, onClick: () => void }) {
+  const colors = {
+    red: "border-red-600/20 text-red-600 bg-red-600/5",
+    orange: "border-orange-500/20 text-orange-500 bg-orange-500/5",
+    yellow: "border-yellow-500/20 text-yellow-500 bg-yellow-500/5"
+  };
+  const activeColors = {
+    red: "bg-red-600 text-white border-red-600 shadow-[0_0_30px_rgba(220,38,38,0.3)]",
+    orange: "bg-orange-500 text-black border-orange-500 shadow-[0_0_30px_rgba(249,115,22,0.3)]",
+    yellow: "bg-yellow-500 text-black border-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.3)]"
+  };
+
+  return (
     <button 
+      type="button" 
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group relative overflow-hidden",
-        active 
-          ? "bg-[#22c55e]/10 text-[#22c55e] shadow-[inset_0_0_20px_rgba(34,197,94,0.05)]" 
-          : "text-white/30 hover:text-white hover:bg-white/5"
+        "w-full p-6 border rounded-[2rem] text-left transition-all duration-300 flex items-center justify-between",
+        active ? activeColors[color] : colors[color]
       )}
     >
-      {active && (
-        <div className="absolute inset-0 bg-gradient-to-r from-[#22c55e]/5 to-transparent pointer-events-none" />
-      )}
-      
-      <span className={cn(
-        "transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 relative z-10",
-        active ? "text-[#22c55e] scale-110 drop-shadow-[0_0_8px_#22c55e]" : "text-white/20"
-      )}>
-        {icon}
-      </span>
-      <span className={cn(
-        "text-[11px] font-black tracking-widest uppercase relative z-10 transition-all duration-300",
-        active ? "text-[#22c55e] drop-shadow-[0_0_8px_#22c55e]" : ""
-      )}>
-        {label}
-      </span>
-      {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#22c55e] shadow-[0_0_12px_#22c55e] relative z-10" />}
+      <div className="space-y-1">
+        <h4 className="text-xl font-black uppercase tracking-tighter">{label}</h4>
+        <p className={cn("text-xs font-medium", active ? "opacity-70" : "opacity-40")}>{desc}</p>
+      </div>
+      {active && <CheckCircle2 size={24} />}
     </button>
   );
 }
@@ -612,7 +609,7 @@ function InfoItem({ icon, label, value }: { icon: React.ReactNode, label: string
         {icon}
         <span className="text-[9px] font-black uppercase tracking-[0.2em]">{label}</span>
       </div>
-      <p className="text-sm font-bold tracking-tight text-white/90">{value}</p>
+      <p className="text-sm font-bold text-white/90">{value}</p>
     </div>
   );
 }
