@@ -30,7 +30,10 @@ import {
   Zap,
   Terminal,
   ShieldCheck,
-  ShieldQuestion
+  ShieldQuestion,
+  X,
+  Cpu,
+  Clock
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -38,8 +41,9 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useAuth, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { signOut } from "firebase/auth";
@@ -138,16 +142,18 @@ export default function GlobalPulseDashboard() {
   const auth = useAuth();
   const db = useFirestore();
 
-  // Wizard state: 1: Consent, 2: Symptoms, 3: AI Analyzing, 4: AI Results, 5: Location/Submit
+  // Wizard state
   const [wizardStep, setWizardStep] = useState(1);
   const [reportDescription, setReportDescription] = useState("");
   const [selectedDisease, setSelectedDisease] = useState("");
   const [selectedProvince, setSelectedProvince] = useState("");
   const [selectedPriority, setSelectedPriority] = useState<PriorityLevel | null>(null);
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
+  const [symptomSearch, setSymptomSearch] = useState("");
   const [isLocating, setIsLocating] = useState(false);
   const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<AiAnalysisResult | null>(null);
+  const [isProxDialogOpen, setIsProxDialogOpen] = useState(false);
 
   // Firestore Data
   const outbreaksQuery = useMemoFirebase(() => {
@@ -179,6 +185,11 @@ export default function GlobalPulseDashboard() {
       prev.includes(symptom) ? prev.filter(s => s !== symptom) : [...prev, symptom]
     );
   };
+
+  const filteredSymptoms = SYMPTOMS_LIST.filter(s => 
+    s.toLowerCase().includes(symptomSearch.toLowerCase()) && 
+    !selectedSymptoms.includes(s)
+  );
 
   const handleAutodetectLocation = () => {
     if (!navigator.geolocation) {
@@ -224,7 +235,7 @@ export default function GlobalPulseDashboard() {
       { name: "Gripe A (H1N1)", markers: ["Tos seca", "Congestión nasal", "Estornudos", "Fiebre alta"] },
     ];
 
-    let bestMatch = profiles[profiles.length - 1]; // Fallback
+    let bestMatch = profiles[profiles.length - 1];
     let maxScore = -1;
     let matchingMarkers: string[] = [];
 
@@ -250,7 +261,6 @@ export default function GlobalPulseDashboard() {
     if (wizardStep === 2) {
       setIsAiAnalyzing(true);
       setWizardStep(3);
-      
       setTimeout(() => {
         const analysis = getAiAnalysis(selectedSymptoms);
         setAiAnalysis(analysis);
@@ -269,7 +279,7 @@ export default function GlobalPulseDashboard() {
       toast({
         variant: "destructive",
         title: "Error de Validación",
-        description: "Asegúrate de haber seleccionado la prioridad, provincia y redactado una nota clínica (mínimo 10 caracteres).",
+        description: "Asegúrate de haber seleccionado la prioridad, provincia y redactado una nota clínica.",
       });
       return;
     }
@@ -293,7 +303,6 @@ export default function GlobalPulseDashboard() {
 
       await addDocumentNonBlocking(collection(db, 'outbreaks'), newOutbreak);
 
-      // Reset Wizard
       setWizardStep(1);
       setReportDescription("");
       setSelectedDisease("");
@@ -312,16 +321,15 @@ export default function GlobalPulseDashboard() {
 
   const isStepValid = () => {
     switch (wizardStep) {
-      case 1: return true; // Consent always valid via button
+      case 1: return true;
       case 2: return selectedSymptoms.length > 0;
-      case 3: return false; // AI scanning state
+      case 3: return false;
       case 4: return !!selectedDisease;
       case 5: return !!selectedPriority && !!selectedProvince && reportDescription.length >= 10;
       default: return false;
     }
   };
 
-  // Adjust display step for progress bar (Step 0 is pre-step, Steps 1-3 are the actual form)
   const actualFormStep = wizardStep === 1 ? 0 : wizardStep === 2 ? 1 : wizardStep === 3 ? 1 : wizardStep === 4 ? 2 : 3;
   const progressValue = (actualFormStep / 3) * 100;
 
@@ -357,6 +365,13 @@ export default function GlobalPulseDashboard() {
           <NavItem icon={<LayoutDashboard size={20} />} label="Alertas Recientes" active={currentView === 'dashboard'} onClick={() => setCurrentView('dashboard')} />
           <NavItem icon={<Globe size={20} />} label="Mapa Táctico" active={currentView === 'map'} onClick={() => setCurrentView('map')} />
           <NavItem icon={<FileText size={20} />} label="Informes" active={currentView === 'reports'} onClick={() => { setCurrentView('reports'); setWizardStep(1); }} />
+          <NavItem 
+            icon={<Cpu size={20} />} 
+            label="Diagnóstico IA" 
+            active={false} 
+            onClick={() => setIsProxDialogOpen(true)} 
+            badge="PROX"
+          />
         </nav>
 
         <div className="p-4 border-t border-white/5 space-y-4">
@@ -442,25 +457,77 @@ export default function GlobalPulseDashboard() {
                     )}
 
                     {wizardStep === 2 && (
-                      <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="space-y-1">
                           <h3 className="text-xl font-bold">Entrada de Síntomas</h3>
-                          <p className="text-xs text-white/40">Seleccione todos los síntomas detectados en el foco para el análisis heurístico.</p>
+                          <p className="text-xs text-white/40">Busque y añada los síntomas detectados para el análisis heurístico.</p>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          {SYMPTOMS_LIST.map(s => (
-                            <button
-                              key={s}
-                              type="button"
-                              onClick={() => toggleSymptom(s)}
-                              className={cn(
-                                "px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border",
-                                selectedSymptoms.includes(s) 
-                                  ? "bg-[#22c55e] border-[#22c55e] text-black shadow-[0_0_10px_rgba(34,197,94,0.3)]" 
-                                  : "bg-white/5 border-white/10 text-white/40 hover:border-white/30"
-                              )}
-                            >{s}</button>
-                          ))}
+                        
+                        <div className="relative group">
+                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-[#22c55e] transition-colors" size={18} />
+                          <Input 
+                            placeholder="Buscar y añadir síntomas (ej. Fiebre, Tos...)"
+                            className="h-14 bg-white/[0.03] border-white/10 focus:border-[#22c55e]/50 focus:ring-[#22c55e]/20 rounded-2xl pl-12 text-sm uppercase font-bold tracking-tight"
+                            value={symptomSearch}
+                            onChange={(e) => setSymptomSearch(e.target.value)}
+                          />
+                        </div>
+
+                        {symptomSearch && (
+                          <div className="bg-[#0c0d0f] border border-white/10 rounded-2xl overflow-hidden max-h-[200px] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                            {filteredSymptoms.length > 0 ? (
+                              filteredSymptoms.map(s => (
+                                <button
+                                  key={s}
+                                  type="button"
+                                  onClick={() => {
+                                    toggleSymptom(s);
+                                    setSymptomSearch("");
+                                  }}
+                                  className="w-full text-left px-5 py-3 text-[10px] font-black uppercase tracking-widest hover:bg-[#22c55e]/10 hover:text-[#22c55e] transition-colors border-b border-white/5 last:border-0"
+                                >
+                                  {s}
+                                </button>
+                              ))
+                            ) : (
+                              <div className="px-5 py-3 text-[10px] text-white/20 uppercase font-black">Sin coincidencias</div>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <Label className="text-[9px] font-black uppercase tracking-widest text-white/30">Síntomas seleccionados: {selectedSymptoms.length}</Label>
+                            {selectedSymptoms.length > 0 && (
+                              <button 
+                                type="button"
+                                onClick={() => setSelectedSymptoms([])} 
+                                className="text-[9px] font-black uppercase text-red-500 hover:text-red-400 transition-colors"
+                              >
+                                Limpiar todo
+                              </button>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-2 min-h-[60px] p-4 bg-white/[0.02] border border-dashed border-white/5 rounded-2xl">
+                            {selectedSymptoms.length === 0 && (
+                              <div className="w-full flex flex-col items-center justify-center py-2 opacity-20">
+                                <Search size={24} className="mb-2" />
+                                <span className="text-[9px] font-black uppercase tracking-widest">Utilice el buscador para añadir</span>
+                              </div>
+                            )}
+                            {selectedSymptoms.map(s => (
+                              <Badge key={s} variant="secondary" className="bg-[#22c55e]/10 border-[#22c55e]/30 text-[#22c55e] px-4 py-2 rounded-xl flex items-center gap-2 group animate-in zoom-in-90">
+                                <span className="text-[9px] font-black uppercase tracking-widest">{s}</span>
+                                <button 
+                                  type="button"
+                                  onClick={() => toggleSymptom(s)}
+                                  className="hover:text-white transition-colors p-0.5 rounded-full hover:bg-[#22c55e]/20"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -704,6 +771,28 @@ export default function GlobalPulseDashboard() {
           </DialogContent>
         </Dialog>
 
+        <Dialog open={isProxDialogOpen} onOpenChange={setIsProxDialogOpen}>
+          <DialogContent className="bg-[#0c0d0f] border-white/10 text-white max-w-md rounded-[2.5rem] p-12 shadow-2xl">
+            <div className="flex flex-col items-center text-center gap-6">
+              <div className="w-20 h-20 rounded-3xl bg-[#22c55e]/10 flex items-center justify-center border border-[#22c55e]/30 shadow-[0_0_30px_rgba(34,197,94,0.1)]">
+                <Cpu size={40} className="text-[#22c55e]" />
+              </div>
+              <div className="space-y-4">
+                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Módulo de Diagnóstico Avanzado</DialogTitle>
+                <DialogDescription className="text-white/60 text-sm leading-relaxed uppercase font-mono">
+                  Este sistema se encuentra actualmente en fase de construcción. Estará disponible próximamente para análisis profundo de patógenos mediante computación cuántica.
+                </DialogDescription>
+              </div>
+              <Button 
+                onClick={() => setIsProxDialogOpen(false)}
+                className="w-full h-14 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black uppercase tracking-widest rounded-2xl text-[10px]"
+              >
+                Cerrar Terminal
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {isPending && (
           <div className="absolute inset-0 z-50 bg-[#000000]/80 backdrop-blur-2xl flex items-center justify-center">
             <div className="flex flex-col items-center gap-8 text-center">
@@ -724,7 +813,7 @@ export default function GlobalPulseDashboard() {
   );
 }
 
-function NavItem({ icon, label, active = false, onClick }: { icon: React.ReactNode, label: string, active?: boolean, onClick: () => void }) {
+function NavItem({ icon, label, active = false, onClick, badge }: { icon: React.ReactNode, label: string, active?: boolean, onClick: () => void, badge?: string }) {
   return (
     <button onClick={onClick} className={cn(
       "w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 group relative",
@@ -732,6 +821,11 @@ function NavItem({ icon, label, active = false, onClick }: { icon: React.ReactNo
     )}>
       <span className={cn("transition-transform group-hover:scale-110", active ? "text-[#22c55e] drop-shadow-[0_0_8px_#22c55e]" : "text-white/20")}>{icon}</span>
       <span className={cn("text-[11px] font-black tracking-widest uppercase", active ? "text-[#22c55e]" : "")}>{label}</span>
+      {badge && (
+        <span className="ml-auto px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[8px] font-black text-white/40 uppercase tracking-tighter">
+          {badge}
+        </span>
+      )}
       {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#22c55e] shadow-[0_0_12px_#22c55e]" />}
     </button>
   );
