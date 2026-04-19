@@ -29,7 +29,8 @@ import {
   Search,
   Zap,
   Terminal,
-  ShieldCheck
+  ShieldCheck,
+  ShieldQuestion
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -137,7 +138,7 @@ export default function GlobalPulseDashboard() {
   const auth = useAuth();
   const db = useFirestore();
 
-  // Wizard state
+  // Wizard state: 1: Consent, 2: Symptoms, 3: AI Analyzing, 4: AI Results, 5: Location/Submit
   const [wizardStep, setWizardStep] = useState(1);
   const [reportDescription, setReportDescription] = useState("");
   const [selectedDisease, setSelectedDisease] = useState("");
@@ -246,16 +247,16 @@ export default function GlobalPulseDashboard() {
   };
 
   const nextStep = () => {
-    if (wizardStep === 1) {
+    if (wizardStep === 2) {
       setIsAiAnalyzing(true);
-      setWizardStep(2);
+      setWizardStep(3);
       
       setTimeout(() => {
         const analysis = getAiAnalysis(selectedSymptoms);
         setAiAnalysis(analysis);
         setSelectedDisease(analysis.name);
         setIsAiAnalyzing(false);
-        setWizardStep(3);
+        setWizardStep(4);
       }, 2200);
     } else {
       setWizardStep(prev => prev + 1);
@@ -264,7 +265,14 @@ export default function GlobalPulseDashboard() {
 
   const handleReportSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProvince || !selectedDisease || !selectedPriority) return;
+    if (!selectedProvince || !selectedDisease || !selectedPriority || reportDescription.length < 10) {
+      toast({
+        variant: "destructive",
+        title: "Error de Validación",
+        description: "Asegúrate de haber seleccionado la prioridad, provincia y redactado una nota clínica (mínimo 10 caracteres).",
+      });
+      return;
+    }
 
     startTransition(() => {
       const coords = PROVINCIA_COORDINATES[selectedProvince];
@@ -285,6 +293,7 @@ export default function GlobalPulseDashboard() {
 
       addDocumentNonBlocking(collection(db, 'outbreaks'), newOutbreak);
 
+      // Reset Wizard
       setWizardStep(1);
       setReportDescription("");
       setSelectedDisease("");
@@ -303,13 +312,18 @@ export default function GlobalPulseDashboard() {
 
   const isStepValid = () => {
     switch (wizardStep) {
-      case 1: return selectedSymptoms.length > 0;
-      case 2: return false; 
-      case 3: return !!selectedDisease;
-      case 4: return !!selectedPriority && !!selectedProvince && reportDescription.length >= 10;
+      case 1: return true; // Consent always valid via button
+      case 2: return selectedSymptoms.length > 0;
+      case 3: return false; // AI scanning state
+      case 4: return !!selectedDisease;
+      case 5: return !!selectedPriority && !!selectedProvince && reportDescription.length >= 10;
       default: return false;
     }
   };
+
+  // Adjust display step for progress bar (Step 0 is pre-step, Steps 1-3 are the actual form)
+  const actualFormStep = wizardStep === 1 ? 0 : wizardStep === 2 ? 1 : wizardStep === 3 ? 1 : wizardStep === 4 ? 2 : 3;
+  const progressValue = (actualFormStep / 3) * 100;
 
   return (
     <div className="relative h-screen w-screen flex bg-[#000000] text-white overflow-hidden font-body">
@@ -391,18 +405,43 @@ export default function GlobalPulseDashboard() {
             <div className="absolute inset-0 p-4 pt-24 z-10 flex flex-col items-center justify-center">
               <div className="w-full max-w-3xl max-h-[85vh] bg-[#0c0d0f] border border-white/5 rounded-[2.5rem] flex flex-col shadow-2xl overflow-hidden relative">
                 
-                <div className="px-8 pt-8 pb-4 space-y-3 shrink-0">
-                  <div className="flex justify-between items-end">
-                    <span className="text-[9px] font-black text-[#22c55e] uppercase tracking-widest">Paso {wizardStep === 2 ? 1 : wizardStep > 2 ? wizardStep - 1 : wizardStep} de 3</span>
-                    <span className="text-[9px] font-bold text-white/20 uppercase">{Math.round((wizardStep/4)*100)}% Completado</span>
+                {wizardStep > 1 && (
+                  <div className="px-8 pt-8 pb-4 space-y-3 shrink-0">
+                    <div className="flex justify-between items-end">
+                      <span className="text-[9px] font-black text-[#22c55e] uppercase tracking-widest">
+                        Paso {actualFormStep} de 3
+                      </span>
+                      <span className="text-[9px] font-bold text-white/20 uppercase">{Math.round(progressValue)}% Completado</span>
+                    </div>
+                    <Progress value={progressValue} className="h-1 bg-white/5" />
                   </div>
-                  <Progress value={(wizardStep / 4) * 100} className="h-1 bg-white/5" />
-                </div>
+                )}
 
-                <div className="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto px-8 py-8 custom-scrollbar">
                   <form onSubmit={handleReportSubmit} className="space-y-6">
                     
                     {wizardStep === 1 && (
+                      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col items-center">
+                        <div className="w-20 h-20 rounded-full bg-[#22c55e]/10 flex items-center justify-center border border-[#22c55e]/30 shadow-[0_0_30px_rgba(34,197,94,0.1)]">
+                          <ShieldQuestion size={40} className="text-[#22c55e]" />
+                        </div>
+                        <div className="text-center space-y-4 max-w-xl">
+                          <h3 className="text-2xl font-black uppercase tracking-tighter">AVISO DE USO DE INTELIGENCIA ARTIFICIAL</h3>
+                          <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl text-sm text-white/60 leading-relaxed font-mono uppercase text-left">
+                            Toda la información sintomatológica y clínica introducida en este informe será analizada mediante algoritmos de Inteligencia Artificial heurística. Las sugerencias de patógenos y diagnósticos preliminares son generadas automáticamente por este sistema y deben ser validadas por personal médico. Al continuar, acepta el procesamiento de datos por IA para soporte al diagnóstico.
+                          </div>
+                        </div>
+                        <Button 
+                          type="button" 
+                          onClick={() => setWizardStep(2)}
+                          className="h-14 w-full max-w-md bg-[#22c55e] hover:bg-[#22c55e]/90 text-black rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-[0_0_20px_rgba(34,197,94,0.3)]"
+                        >
+                          HE LEÍDO Y ACEPTO
+                        </Button>
+                      </div>
+                    )}
+
+                    {wizardStep === 2 && (
                       <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="space-y-1">
                           <h3 className="text-xl font-bold">Entrada de Síntomas</h3>
@@ -426,7 +465,7 @@ export default function GlobalPulseDashboard() {
                       </div>
                     )}
 
-                    {wizardStep === 2 && (
+                    {wizardStep === 3 && (
                       <div className="h-64 flex flex-col items-center justify-center space-y-6 animate-in fade-in duration-500">
                         <div className="relative">
                           <BrainCircuit size={48} className="text-[#22c55e] animate-pulse" />
@@ -439,7 +478,7 @@ export default function GlobalPulseDashboard() {
                       </div>
                     )}
 
-                    {wizardStep === 3 && (
+                    {wizardStep === 4 && (
                       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="space-y-1">
                           <h3 className="text-xl font-bold">Resultados del Análisis del Sistema</h3>
@@ -507,7 +546,7 @@ export default function GlobalPulseDashboard() {
                       </div>
                     )}
 
-                    {wizardStep === 4 && (
+                    {wizardStep === 5 && (
                       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="space-y-1">
                           <h3 className="text-xl font-bold">Clasificación y Geografía</h3>
@@ -576,27 +615,27 @@ export default function GlobalPulseDashboard() {
                       </div>
                     )}
 
-                    {wizardStep !== 2 && (
+                    {wizardStep > 1 && wizardStep !== 3 && (
                       <div className="flex gap-3 pt-4">
-                        {wizardStep > 1 && (
+                        {wizardStep > 2 && (
                           <Button 
                             type="button" 
                             variant="ghost" 
-                            onClick={() => setWizardStep(wizardStep === 3 ? 1 : prev => prev - 1)}
+                            onClick={() => setWizardStep(wizardStep === 4 ? 2 : prev => prev - 1)}
                             className="h-14 flex-1 text-white/40 hover:text-white hover:bg-white/5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px]"
                           >
                             <ChevronLeft size={16} className="mr-1" /> Anterior
                           </Button>
                         )}
                         
-                        {wizardStep < 4 ? (
+                        {wizardStep < 5 ? (
                           <Button 
                             type="button" 
                             disabled={!isStepValid()}
                             onClick={nextStep}
                             className="h-14 flex-[2] bg-[#22c55e] hover:bg-[#22c55e]/90 text-black rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-[0_0_20px_rgba(34,197,94,0.2)]"
                           >
-                            {wizardStep === 1 ? 'Iniciar Análisis IA' : 'Siguiente'} <ChevronRight size={16} className="ml-1" />
+                            {wizardStep === 2 ? 'Iniciar Análisis IA' : 'Siguiente'} <ChevronRight size={16} className="ml-1" />
                           </Button>
                         ) : (
                           <Button 
