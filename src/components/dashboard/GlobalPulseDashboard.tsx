@@ -274,7 +274,7 @@ export default function GlobalPulseDashboard() {
       return;
     }
 
-    startTransition(() => {
+    startTransition(async () => {
       const coords = PROVINCIA_COORDINATES[selectedProvince];
       const newOutbreak = {
         diseaseName: selectedDisease,
@@ -291,7 +291,7 @@ export default function GlobalPulseDashboard() {
         reportedDate: new Date().toISOString()
       };
 
-      addDocumentNonBlocking(collection(db, 'outbreaks'), newOutbreak);
+      await addDocumentNonBlocking(collection(db, 'outbreaks'), newOutbreak);
 
       // Reset Wizard
       setWizardStep(1);
@@ -434,7 +434,7 @@ export default function GlobalPulseDashboard() {
                         <Button 
                           type="button" 
                           onClick={() => setWizardStep(2)}
-                          className="h-14 w-full max-w-md bg-[#22c55e] hover:bg-[#22c55e]/90 text-black rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-[0_0_20px_rgba(34,197,94,0.3)]"
+                          className="h-14 w-full max-w-md bg-[#22c55e] hover:bg-[#22c55e]/90 text-black rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-[0_0_30px_rgba(34,197,94,0.3)]"
                         >
                           HE LEÍDO Y ACEPTO
                         </Button>
