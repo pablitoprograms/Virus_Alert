@@ -33,7 +33,8 @@ import {
   ShieldQuestion,
   X,
   Cpu,
-  Clock
+  Clock,
+  HeartPulse
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -775,12 +776,12 @@ export default function GlobalPulseDashboard() {
           <DialogContent className="bg-[#0c0d0f] border-white/10 text-white max-w-md rounded-[2.5rem] p-12 shadow-2xl">
             <div className="flex flex-col items-center text-center gap-6">
               <div className="w-20 h-20 rounded-3xl bg-[#22c55e]/10 flex items-center justify-center border border-[#22c55e]/30 shadow-[0_0_30px_rgba(34,197,94,0.1)]">
-                <Cpu size={40} className="text-[#22c55e]" />
+                <HeartPulse size={40} className="text-[#22c55e]" />
               </div>
               <div className="space-y-4">
-                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Módulo de Diagnóstico Avanzado</DialogTitle>
+                <DialogTitle className="text-2xl font-black uppercase tracking-tighter">Módulo de Tratamiento IA</DialogTitle>
                 <DialogDescription className="text-white/60 text-sm leading-relaxed uppercase font-mono">
-                  Este sistema se encuentra actualmente en fase de construcción. Estará disponible próximamente para análisis profundo de patógenos mediante computación cuántica.
+                  Esta página estará dedicada exclusivamente a recomendar protocolos y tratamientos médicos personalizados mediante el uso de inteligencia artificial. Esta funcionalidad se encuentra actualmente en fase de desarrollo.
                 </DialogDescription>
               </div>
               <Button 
