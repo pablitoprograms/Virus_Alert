@@ -1,13 +1,15 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
-import requests # Esta librería es la que "navega" por internet
 
 app = Flask(__name__)
 CORS(app)
 
+@app.route('/')
+def home():
+    return "API de Virus Alert funcionando 🚀"
+
 @app.route('/api/alerta', methods=['GET'])
 def enviar_alerta():
-    # Este es un ejemplo de datos que tu frontend recibirá
     datos = {
         "estado": "peligro",
         "mensaje": "¡Alerta de Virus detectada en el sistema!",
