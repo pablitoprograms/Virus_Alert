@@ -65,7 +65,8 @@ export function RecentAlerts({
   const all = [...apiAlerts, ...(outbreaks || [])];
 
   return (
-    <div className="p-4 space-y-3">
+    // Le hemos añadido un límite de altura y el scroll vertical (overflow-y-auto)
+    <div className="p-4 space-y-3 max-h-[650px] overflow-y-auto pr-2">
       {all.length === 0 ? (
         <div className="text-white/40 text-sm">
           No active real-time outbreaks
@@ -75,7 +76,8 @@ export function RecentAlerts({
           <div
             key={o.id}
             onClick={() => onSelect(o)}
-            className="p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer"
+            // Le he añadido hover:bg-white/10 para que brille un poco al pasar el ratón (toque táctico)
+            className="p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer transition-colors hover:bg-white/10"
           >
             <div className="font-bold">{o.diseaseName}</div>
             <div className="text-xs opacity-60">
