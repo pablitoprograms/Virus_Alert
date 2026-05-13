@@ -5,7 +5,8 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  /* 🌙 TEMA OSCURO (Tu diseño original) */
+  :root, :root.dark {
     --background: 0 0% 0%;
     --foreground: 210 20% 98%;
     --card: 0 0% 2%;
@@ -32,6 +33,52 @@
     --chart-4: 0 100% 45%;
     --chart-5: 280 65% 60%;
   }
+
+  /* ☀️ TEMA CLARO */
+  :root.light {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 142 71% 45%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 142 76% 55%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 142 76% 55%;
+  }
+
+  /* 🪪 TEMA MORADO TÁCTICO */
+  :root.purple {
+    --background: 270 60% 6%;
+    --foreground: 275 100% 95%;
+    --card: 270 60% 10%;
+    --card-foreground: 275 100% 95%;
+    --popover: 270 60% 8%;
+    --popover-foreground: 275 100% 95%;
+    --primary: 142 71% 45%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 270 60% 14%;
+    --secondary-foreground: 275 100% 95%;
+    --muted: 270 60% 14%;
+    --muted-foreground: 270 20% 70%;
+    --accent: 142 76% 55%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 275 100% 95%;
+    --border: 270 50% 20%;
+    --input: 270 50% 20%;
+    --ring: 142 76% 55%;
+  }
 }
 
 @layer base {
@@ -39,12 +86,14 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-body antialiased selection:bg-accent/30 selection:text-accent;
+    @apply bg-background text-foreground font-body antialiased selection:bg-accent/30 selection:text-accent transition-colors duration-500 ease-in-out;
     overflow: hidden;
   }
 }
 
-/* Leaflet Overrides */
+/* =======================================================
+   LEAFLET Y COMPONENTES CUSTOMIZADOS (Tu código intacto)
+   ======================================================= */
 .leaflet-container {
   background: #000000 !important;
   width: 100%;

@@ -1,96 +1,96 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer } from 'react-leaflet';
-import { cn } from "@/lib/utils";
-import 'leaflet/dist/leaflet.css';
+import { useEffect, useState } from "react";
+import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 
-interface WorldMapProps {
-  children?: React.ReactNode;
-}
+type Brote = {
+  enfermedad: string;
+  pais: string;
+  lat: number;
+  lng: number;
+  afectados: number;
+  fecha_reporte: string;
+  fuente?: string;
+  prioridad?: string;
+};
 
-export function WorldMap({ children }: WorldMapProps) {
-  const [datosSalud, setDatosSalud] = useState<any>(null);
+export default function WorldMap() {
+  const [data, setData] = useState<Brote[]>([]);
 
   useEffect(() => {
-    fetch('http://127.0.0.1:5000/api/reportes-reales')
-      .then(res => res.json())
-      .then(data => {
-        setDatosSalud(data);
-        console.log("Datos de Flask recibidos:", data);
+    fetch("http://127.0.0.1:5000/api/reportes-reales")
+      .then((r) => r.json())
+      .then((json) => {
+        setData(json.detalle_brotes || []);
       })
-      .catch(err => console.error("Error conectando con Flask:", err));
+      .catch((err) => {
+        console.error("API error:", err);
+        setData([]);
+      });
   }, []);
 
+  const getColor = (b: Brote) => {
+    if (b.prioridad === "High") return "#ff3b30";
+    if (b.prioridad === "Medium") return "#ff9500";
+    return "#34c759";
+  };
+
   return (
-    <div className="relative w-full h-full bg-[#0a0a0c] overflow-hidden select-none">
-      <MapContainer 
-        center={[40.4168, -3.7038]} 
-        zoom={6} 
-        scrollWheelZoom={true}
-        className="w-full h-full z-10"
-        zoomControl={true}
-        attributionControl={false}
+    <>
+      <div
+        style={{
+          position: "absolute",
+          zIndex: 999,
+          bottom: 10,
+          left: 10,
+          background: "rgba(0,0,0,0.75)",
+          color: "white",
+          padding: "10px 12px",
+          borderRadius: "10px",
+          fontSize: "12px",
+          fontWeight: "bold",
+        }}
+      >
+        señales: {data.length}
+      </div>
+
+      <MapContainer
+        center={[20, 0]}
+        zoom={2}
+        style={{ height: "100%", width: "100%" }}
       >
         <TileLayer
           url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          attribution='&copy; Esri'
+          attribution="&copy; Esri"
         />
-        {children}
+
+        {data.map((b, i) => (
+          <CircleMarker
+            key={i}
+            center={[b.lat || 0, b.lng || 0]}
+            radius={8}
+            pathOptions={{
+              color: getColor(b),
+              fillColor: getColor(b),
+              fillOpacity: 0.7,
+              weight: 2,
+            }}
+          >
+            <Popup>
+              <div style={{ fontSize: "13px" }}>
+                <b>{b.enfermedad}</b>
+                <br />
+                🌍 {b.pais}
+                <br />
+                📡 {b.fuente || "unknown"}
+                <br />
+                📅 {b.fecha_reporte}
+              </div>
+            </Popup>
+          </CircleMarker>
+        ))}
       </MapContainer>
-
-      {/* Leyenda Dinámica Mejorada */}
-      <div className="absolute left-8 bottom-8 flex flex-col gap-4 p-6 bg-[#0f1012]/90 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl min-w-[240px] hidden sm:flex z-30 pointer-events-none">
-        <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-1">
-          {datosSalud ? 'Sistema Sincronizado' : 'Conectando con Flask...'}
-        </h3>
-        
-        <div className="space-y-3">
-          {datosSalud ? (
-            <>
-              {/* Bloque de Estadísticas Reales */}
-              <div className="flex flex-col gap-1.5 mb-4 border-b border-white/5 pb-4">
-                <div className="text-white text-[11px] flex justify-between">
-                  <span className="text-red-500 font-bold">CASOS HOY:</span> 
-                  <span>{datosSalud.hoy.toLocaleString()}</span>
-                </div>
-                <div className="text-white text-[11px] flex justify-between">
-                  <span className="text-blue-400 font-bold">TOTAL ACUM.:</span> 
-                  <span>{datosSalud.total_casos.toLocaleString()}</span>
-                </div>
-                <div className="text-white text-[11px] flex justify-between">
-                  <span className="text-green-500 font-bold">RECUPERADOS:</span> 
-                  <span>{datosSalud.recuperados.toLocaleString()}</span>
-                </div>
-              </div>
-
-              {/* Estados de Alerta */}
-              <div className="space-y-3">
-                <LegendItem color="bg-red-600 shadow-[0_0_15px_rgba(239,68,68,0.4)]" label="Emergencia Crítica" />
-                <LegendItem color="bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.3)]" label="Alerta de Nivel 2" />
-                <LegendItem color="bg-yellow-400" label="Vigilancia Activa" />
-              </div>
-            </>
-          ) : (
-            <div className="animate-pulse flex space-x-2 items-center">
-              <div className="rounded-full bg-white/10 h-2 w-2"></div>
-              <p className="text-white/50 text-[10px]">Esperando respuesta del backend...</p>
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {/* Capa de atmósfera oscura */}
-      <div className="absolute inset-0 pointer-events-none z-20 bg-gradient-to-t from-[#060608]/60 via-transparent to-[#060608]/40" />
-    </div>
-  );
-}
-
-function LegendItem({ color, label }: { color: string, label: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className={cn("w-2.5 h-2.5 rounded-full", color)} />
-      <span className="text-[10px] font-bold text-white/80 uppercase tracking-tight">{label}</span>
-    </div>
+    </>
   );
 }
