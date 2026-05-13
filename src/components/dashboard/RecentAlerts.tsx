@@ -1,126 +1,89 @@
-
 "use client";
 
-import React from 'react';
-import { cn } from "@/lib/utils";
-import { AlertTriangle, Clock, MapPin, Trash2 } from 'lucide-react';
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
+import React, { useEffect, useState } from "react";
 
 interface Outbreak {
   id: string;
   diseaseName: string;
   locationDescription: string;
-  priority: 'High' | 'Medium' | 'Low';
+  priority: "High" | "Medium" | "Low";
   status: string;
   reportedDate: string;
-  intensityLevel?: number;
-  intensity?: number;
+  intensityLevel: number;
 }
 
-interface RecentAlertsProps {
-  outbreaks: Outbreak[];
-  onSelect: (outbreak: Outbreak) => void;
+export function RecentAlerts({
+  outbreaks,
+  onSelect,
+  onDelete,
+}: {
+  outbreaks: any[];
+  onSelect: (o: Outbreak) => void;
   onDelete: (id: string) => void;
-}
+}) {
+  const [apiAlerts, setApiAlerts] = useState<Outbreak[]>([]);
 
-export function RecentAlerts({ outbreaks, onSelect, onDelete }: RecentAlertsProps) {
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(
+          "http://127.0.0.1:5000/api/reportes-reales"
+        );
+
+        const data = await res.json();
+
+        const mapped: Outbreak[] = (data.detalle_brotes || []).map(
+          (b: any, i: number) => {
+            const afectados = Number(b.afectados || 0);
+
+            let priority: "High" | "Medium" | "Low" = "Low";
+            if (afectados > 1000) priority = "High";
+            else if (afectados > 200) priority = "Medium";
+
+            return {
+              id: `api-${i}`,
+              diseaseName: b.enfermedad || "Unknown",
+              locationDescription: b.pais || "Unknown",
+              priority,
+              status: "active",
+              reportedDate: b.fecha_reporte || "",
+              intensityLevel: Math.min(100, afectados / 50),
+            };
+          }
+        );
+
+        setApiAlerts(mapped);
+      } catch (err) {
+        console.error("API error:", err);
+        setApiAlerts([]);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const all = [...apiAlerts, ...(outbreaks || [])];
+
   return (
-    <div className="w-full h-full flex flex-col p-6 gap-6 overflow-hidden">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-3">
-          <AlertTriangle className="text-[#22c55e]" size={18} />
-          <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white/80">Monitorización Nacional</h3>
+    <div className="p-4 space-y-3">
+      {all.length === 0 ? (
+        <div className="text-white/40 text-sm">
+          No active real-time outbreaks
         </div>
-        <div className="flex flex-col gap-2">
-           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20">
-              <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-              <span className="text-[9px] font-bold text-red-400 uppercase tracking-tighter">Emergencia Crítica</span>
-           </div>
-           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-orange-500/10 border border-orange-500/20">
-              <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-              <span className="text-[9px] font-bold text-orange-400 uppercase tracking-tighter">Alerta Nivel 2</span>
-           </div>
-           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-              <div className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
-              <span className="text-[9px] font-bold text-yellow-400 uppercase tracking-tighter">Vigilancia Activa</span>
-           </div>
-        </div>
-      </div>
-
-      <ScrollArea className="flex-1 w-full">
-        <div className="flex flex-col space-y-4 pr-4">
-          {outbreaks.map((outbreak, i) => (
-            <AlertCard key={outbreak.id || i} outbreak={outbreak} onClick={() => onSelect(outbreak)} onDelete={() => onDelete(outbreak.id)} />
-          ))}
-          {outbreaks.length === 0 && (
-            <div className="flex items-center justify-center p-8 text-white/20 border border-dashed border-white/10 rounded-2xl text-center uppercase text-[10px] font-black tracking-widest">
-              Sin alertas registradas en el sistema
+      ) : (
+        all.map((o) => (
+          <div
+            key={o.id}
+            onClick={() => onSelect(o)}
+            className="p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer"
+          >
+            <div className="font-bold">{o.diseaseName}</div>
+            <div className="text-xs opacity-60">
+              {o.locationDescription}
             </div>
-          )}
-        </div>
-      </ScrollArea>
-    </div>
-  );
-}
-
-function AlertCard({ outbreak, onClick, onDelete }: { outbreak: Outbreak; onClick: () => void; onDelete: () => void }) {
-  const isHigh = outbreak.priority === 'High';
-  const isMedium = outbreak.priority === 'Medium';
-
-  return (
-    <div 
-      className={cn(
-        "w-full p-5 rounded-2xl border transition-all duration-300 group cursor-pointer relative",
-        isHigh 
-          ? "bg-red-500/5 border-red-500/10 hover:border-red-500/30 shadow-[0_4px_20px_rgba(239,68,68,0.05)]" 
-          : isMedium ? "bg-orange-500/5 border-orange-500/10 hover:border-orange-500/30"
-          : "bg-white/[0.03] border-white/5 hover:border-white/20"
-      )}
-    >
-      <div onClick={onClick} className="flex justify-between items-start mb-4">
-        <div className="space-y-1">
-          <h4 className="text-sm font-bold text-white group-hover:text-[#22c55e] transition-colors truncate">
-            {outbreak.diseaseName}
-          </h4>
-          <div className="flex items-center gap-1.5 text-white/40">
-            <MapPin size={10} />
-            <span className="text-[10px] truncate">{outbreak.locationDescription}</span>
           </div>
-        </div>
-        <div className={cn(
-          "px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest",
-          isHigh ? "bg-red-600 text-white" : isMedium ? "bg-orange-500 text-black" : "bg-yellow-500 text-black"
-        )}>
-          {isHigh ? 'Emergencia' : isMedium ? 'Alerta' : 'Vigilancia'}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between pt-4 border-t border-white/5">
-        <div className="flex items-center gap-1.5 text-white/30">
-          <Clock size={10} />
-          <span className="text-[10px]">{new Date(outbreak.reportedDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span>
-        </div>
-        <div className="flex items-center gap-4">
-           <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-white/40">Intensidad</span>
-              <span className={cn("text-xs font-bold", isHigh ? "text-red-400" : isMedium ? "text-orange-400" : "text-yellow-400")}>
-                {outbreak.intensityLevel || outbreak.intensity}%
-              </span>
-           </div>
-           <Button 
-             variant="ghost" 
-             size="icon" 
-             className="h-8 w-8 text-red-500/30 hover:text-red-500 hover:bg-red-500/10 transition-all"
-             onClick={(e) => {
-               e.stopPropagation();
-               onDelete();
-             }}
-           >
-             <Trash2 size={14} />
-           </Button>
-        </div>
-      </div>
+        ))
+      )}
     </div>
   );
 }

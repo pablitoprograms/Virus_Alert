@@ -1,19 +1,85 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
-import requests # Esta librería es la que "navega" por internet
+import requests
+import xml.etree.ElementTree as ET
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
 
-@app.route('/api/alerta', methods=['GET'])
-def enviar_alerta():
-    # Este es un ejemplo de datos que tu frontend recibirá
-    datos = {
-        "estado": "peligro",
-        "mensaje": "¡Alerta de Virus detectada en el sistema!",
-        "nivel_amenaza": 5
-    }
-    return jsonify(datos)
+@app.route('/api/reportes-reales')
+def datos():
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    alertas = []
+
+    # -------------------------
+    # WHO RSS (REAL)
+    # -------------------------
+    try:
+        url = "https://www.who.int/feeds/entity/csr/don/feeds/en/rss.xml"
+        res = requests.get(url, timeout=10)
+
+        root = ET.fromstring(res.content)
+
+        for item in root.findall('.//item')[:30]:
+            title_node = item.find('title')
+            if title_node is None or not title_node.text:
+                continue
+
+            alertas.append({
+                "enfermedad": title_node.text,
+                "pais": "Global",
+                "lat": 0,
+                "lng": 0,
+                "afectados": 0,
+                "fecha_reporte": datetime.utcnow().strftime("%d/%m/%Y"),
+                "prioridad": "Medium",
+                "fuente": "WHO"
+            })
+
+    except Exception as e:
+        print("WHO error:", e)
+
+    # -------------------------
+    # HealthMap RSS (REAL)
+    # -------------------------
+    try:
+        url = "https://healthmap.org/alerts_rss.php"
+        res = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+
+        root = ET.fromstring(res.content)
+
+        for item in root.findall('.//item')[:30]:
+            title_node = item.find('title')
+            if title_node is None or not title_node.text:
+                continue
+
+            title = title_node.text
+
+            parts = title.split(" - ")
+            disease = parts[0]
+
+            alertas.append({
+                "enfermedad": disease,
+                "pais": "Unknown",
+                "lat": 0,
+                "lng": 0,
+                "afectados": 0,
+                "fecha_reporte": datetime.utcnow().strftime("%d/%m/%Y"),
+                "prioridad": "Low",
+                "fuente": "HealthMap"
+            })
+
+    except Exception as e:
+        print("HealthMap error:", e)
+
+    # -------------------------
+    # ❌ NO FALLBACK
+    # -------------------------
+    return jsonify({
+        "detalle_brotes": alertas,
+        "total": len(alertas)
+    })
+
+if __name__ == "__main__":
+    app.run(port=5000, debug=True)
